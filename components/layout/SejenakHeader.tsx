@@ -4,7 +4,7 @@ import React from "react";
 import { Avatar } from "@/components/ui/Avatar";
 import {
   SearchIcon,
-  GridIcon,
+  CommandIcon,
   CalendarIcon,
   SettingsIcon,
 } from "@/components/icons";
@@ -87,7 +87,7 @@ export const TopHeaderBar: React.FC<{
             className="w-full pl-10 pr-10 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-[#191919] text-[#191919] dark:text-[#F0EEED] placeholder-[#706C6B] focus:outline-none focus:ring-2 focus:ring-[#C1A7A3]"
           />
           <button className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 rounded hover:bg-[#F0EEED] dark:hover:bg-[#3D3B3A] transition-colors">
-            <GridIcon />
+            <CommandIcon />
           </button>
         </div>
       </div>
