@@ -117,14 +117,14 @@ export default function PointRulesPage() {
                 Gain point from total spent
               </h2>
               <div className="space-y-3">
-                <div className="flex items-start gap-2">
-                  <span className="text-[#706C6B] dark:text-[#C1A7A3] mt-1">•</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[#706C6B] dark:text-[#C1A7A3]">•</span>
                   <p className="text-sm text-[#191919] dark:text-[#F0EEED]">
                     New member gain 10 points
                   </p>
                 </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-[#706C6B] dark:text-[#C1A7A3] mt-1">•</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[#706C6B] dark:text-[#C1A7A3]">•</span>
                   <p className="text-sm text-[#191919] dark:text-[#F0EEED]">
                     Point rule : Members gain 10 for every Rp 100.000 spent
                   </p>
