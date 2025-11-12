@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { SejenakDashboardLayout } from "@/components/layout/SejenakDashboardLayout";
+import { Footer } from "@/components/layout";
 import {
   Breadcrumbs,
   PageHeader,
@@ -130,6 +131,7 @@ export default function TreatmentPage() {
         setIsDarkMode((prev) => !prev);
       }}
       customHeader={null}
+      footer={<Footer />}
     >
       <div>
         {/* Breadcrumbs */}

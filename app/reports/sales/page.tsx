@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { SejenakDashboardLayout } from "@/components/layout/SejenakDashboardLayout";
+import { Footer } from "@/components/layout";
 import {
   Breadcrumbs,
   SalesCategoryNav,
@@ -84,6 +85,7 @@ export default function SalesPage() {
         setIsDarkMode((prev) => !prev);
       }}
       customHeader={null}
+      footer={<Footer />}
     >
       <div>
         {/* Breadcrumbs */}

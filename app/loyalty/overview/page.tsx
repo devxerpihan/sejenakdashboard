@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { SejenakDashboardLayout } from "@/components/layout/SejenakDashboardLayout";
+import { Footer } from "@/components/layout";
 import { Breadcrumbs } from "@/components/services";
 import { DateRangePicker } from "@/components/ui/DateRangePicker";
 import { SejenakStatCard } from "@/components/dashboard/SejenakStatCard";
@@ -255,6 +256,7 @@ export default function LoyaltyOverviewPage() {
         setIsDarkMode((prev) => !prev);
       }}
       customHeader={null}
+      footer={<Footer />}
     >
       <div>
         {/* Breadcrumbs */}

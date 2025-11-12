@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from "react";
 import { SejenakDashboardLayout } from "@/components/layout/SejenakDashboardLayout";
+import { Footer } from "@/components/layout";
 import {
   AppointmentSchedule,
   AppointmentHeader,
-  Footer,
 } from "@/components/appointment";
 import { Appointment, Therapist, ViewMode } from "@/types/appointment";
 import { navItems } from "@/config/navigation";

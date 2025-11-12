@@ -80,13 +80,15 @@ export const SejenakDashboardLayout: React.FC<SejenakDashboardLayoutProps> = ({
             />
           )}
           {/* Main content */}
-          <main className="flex-1 overflow-y-auto p-6 flex flex-col min-h-0">{children}</main>
-          {/* Footer - spans from sidebar edge to right edge */}
-          {footer && (
-            <div className="border-t border-zinc-200 dark:border-zinc-800">
-              {footer}
-            </div>
-          )}
+          <main className="flex-1 overflow-y-auto flex flex-col min-h-0">
+            <div className="flex-1 p-6">{children}</div>
+            {/* Footer - inside scrollable content, at bottom */}
+            {footer && (
+              <div className="border-t border-zinc-200 dark:border-zinc-800 mt-auto w-full">
+                {footer}
+              </div>
+            )}
+          </main>
         </div>
       </div>
     </div>

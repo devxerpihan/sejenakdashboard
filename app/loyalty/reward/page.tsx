@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { SejenakDashboardLayout } from "@/components/layout/SejenakDashboardLayout";
+import { Footer } from "@/components/layout";
 import { Breadcrumbs, PageHeader, RewardTable } from "@/components/services";
 import { EditIcon } from "@/components/icons";
 import { navItems } from "@/config/navigation";
@@ -94,6 +95,7 @@ export default function RewardPage() {
         setIsDarkMode((prev) => !prev);
       }}
       customHeader={null}
+      footer={<Footer />}
     >
       <div>
         {/* Breadcrumbs */}

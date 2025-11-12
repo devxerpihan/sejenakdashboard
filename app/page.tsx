@@ -40,7 +40,7 @@ export default function Home() {
 
         {/* Footer Text */}
         <p className="mt-16 text-sm text-[#706C6B] dark:text-[#C1A7A3]">
-          © 2025 Sejenak Beauty Lounge, All Rights Reserved
+          © 2025 Sejenak Beauty Lounge. All Rights Reserved
         </p>
       </div>
     </div>

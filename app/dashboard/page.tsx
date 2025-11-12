@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { SejenakDashboardLayout } from "@/components/layout/SejenakDashboardLayout";
+import { Footer } from "@/components/layout";
 import {
   SejenakStatCard,
   AppointmentSummary,
@@ -147,6 +148,7 @@ export default function DashboardPage() {
       onDarkModeToggle={() => {
         setIsDarkMode((prev) => !prev);
       }}
+      footer={<Footer />}
     >
       <div className="space-y-6">
         {/* Stat Cards Grid */}
