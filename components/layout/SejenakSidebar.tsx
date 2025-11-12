@@ -151,7 +151,7 @@ export const SejenakSidebar: React.FC<SejenakSidebarProps> = ({
       <aside
         className={`
           fixed lg:static left-0 z-40
-          w-64 bg-white dark:bg-[#191919] border-r border-zinc-200 dark:border-zinc-800
+          w-68 bg-white dark:bg-[#191919] border-r border-zinc-200 dark:border-zinc-800
           transform transition-transform duration-200 ease-in-out
           ${isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
           flex flex-col h-full
