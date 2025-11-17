@@ -17,7 +17,12 @@ export const DonutChart: React.FC<DonutChartProps> = ({
   totalValue,
   title,
 }) => {
-  const total = data.reduce((sum, item) => sum + item.value, 0);
+  // Calculate total from the data (this reflects the actual date-filtered data)
+  // This ensures the center text updates when date range changes
+  const totalFromData = data.reduce((sum, item) => sum + item.value, 0);
+  // Always use the calculated total from data to reflect date-filtered values
+  const displayTotal = totalFromData;
+  const total = totalFromData;
   const outerRadius = 80;
   const innerRadius = 50; // Inner radius for the donut hole
   const centerX = 100;
@@ -105,7 +110,7 @@ export const DonutChart: React.FC<DonutChartProps> = ({
                 {totalLabel}
               </p>
               <p className="text-2xl font-bold text-[#191919] dark:text-[#F0EEED]">
-                {totalValue.toLocaleString()}
+                {displayTotal.toLocaleString()}
               </p>
             </div>
           </div>

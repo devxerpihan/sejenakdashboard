@@ -15,9 +15,6 @@ interface SejenakDashboardLayoutProps {
   dateRange: { start: Date; end: Date };
   onDateRangeChange: (direction: "prev" | "next") => void;
   onPeriodChange?: (period: import("@/components/ui/DateRangePicker").PeriodType, start: Date, end: Date) => void;
-  category?: string;
-  categories?: string[];
-  onCategoryChange?: (category: string) => void;
   isDarkMode: boolean;
   onDarkModeToggle: () => void;
   viewSwitcher?: React.ReactNode;
@@ -35,9 +32,6 @@ export const SejenakDashboardLayout: React.FC<SejenakDashboardLayoutProps> = ({
   dateRange,
   onDateRangeChange,
   onPeriodChange,
-  category,
-  categories,
-  onCategoryChange,
   isDarkMode,
   onDarkModeToggle,
   viewSwitcher,
@@ -78,9 +72,6 @@ export const SejenakDashboardLayout: React.FC<SejenakDashboardLayoutProps> = ({
               dateRange={dateRange}
               onDateRangeChange={onDateRangeChange}
               onPeriodChange={onPeriodChange}
-              category={category}
-              categories={categories}
-              onCategoryChange={onCategoryChange}
               viewSwitcher={viewSwitcher}
             />
           )}

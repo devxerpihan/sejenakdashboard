@@ -201,13 +201,13 @@ export function useDashboardData(
 
         if (therapistsError) throw therapistsError;
 
-        // Fetch customers count (profiles with role customer)
-        const { count: customerCount, error: customersError } = await supabase
-          .from("profiles")
-          .select("id", { count: "exact", head: true })
-          .eq("role", "customer");
-
-        if (customersError) throw customersError;
+        // Calculate unique customers from filtered bookings (within date range)
+        const uniqueCustomerIds = new Set(
+          filteredBookings
+            .map((b) => b.user_id)
+            .filter((id) => id !== null && id !== undefined)
+        );
+        const customerCount = uniqueCustomerIds.size;
 
         // Calculate stats
         const appointmentCount = filteredBookings.length;
@@ -232,7 +232,16 @@ export function useDashboardData(
 
 
         // Calculate trends based on date range
-        const trends = calculateTrends(filteredBookings, branchId, startDate, endDate);
+        const trends = await calculateTrends(filteredBookings, branchId, startDate, endDate);
+        
+        // Debug: Log trends to verify they're being calculated
+        console.log("Trends calculated:", {
+          therapistTrend: trends.therapistTrend,
+          customerTrend: trends.customerTrend,
+          appointmentTrend: trends.appointmentTrend,
+          revenueTrend: trends.revenueTrend,
+          bookingsCount: filteredBookings.length,
+        });
 
         setStats({
           therapistCount: therapistCount || 0,
@@ -251,12 +260,12 @@ export function useDashboardData(
         const appointmentStats = calculateAppointmentStats(filteredBookings, startDate, endDate);
         setAppointmentData(appointmentStats);
 
-        // Calculate top categories
-        const topCategories = await calculateTopCategories(filteredBookings, branchId);
+        // Calculate top categories (within date range)
+        const topCategories = await calculateTopCategories(filteredBookings, branchId, startDate, endDate);
         setTopCategoryData(topCategories);
 
-        // Calculate top treatments
-        const topTreatments = await calculateTopTreatments(filteredBookings, branchId);
+        // Calculate top treatments (within date range)
+        const topTreatments = await calculateTopTreatments(filteredBookings, branchId, startDate, endDate);
         setTopTreatmentData(topTreatments);
 
         // Calculate top therapists
@@ -292,12 +301,30 @@ export function useDashboardData(
 // Helper functions
 async function calculateTopCategories(
   bookings: any[],
-  branchId: string | null
+  branchId: string | null,
+  startDate: Date,
+  endDate: Date
 ): Promise<TopCategoryData[]> {
   const categoryColors = ["#C1A7A3", "#DCCAB7", "#706C6B"];
   
+  // Filter bookings by date range explicitly
+  const startDateStr = startDate.toISOString().split("T")[0];
+  const endDateStr = endDate.toISOString().split("T")[0];
+  
+  const dateFilteredBookings = bookings.filter((booking) => {
+    if (!booking.booking_date) return false;
+    const bookingDate = booking.booking_date instanceof Date 
+      ? booking.booking_date 
+      : new Date(booking.booking_date);
+    
+    if (isNaN(bookingDate.getTime())) return false;
+    
+    const bookingDateStr = bookingDate.toISOString().split("T")[0];
+    return bookingDateStr >= startDateStr && bookingDateStr <= endDateStr;
+  });
+  
   // Get treatment IDs from bookings
-  const treatmentIds = bookings
+  const treatmentIds = dateFilteredBookings
     .map((b) => b.treatment_id)
     .filter((id) => id);
 
@@ -323,7 +350,7 @@ async function calculateTopCategories(
   // Count bookings by category (not treatments)
   const categoryCounts: Record<string, number> = {};
   
-  bookings.forEach((booking) => {
+  dateFilteredBookings.forEach((booking) => {
     if (booking.treatment_id) {
       const categoryName = treatmentCategoryMap.get(booking.treatment_id) || "Other";
       categoryCounts[categoryName] = (categoryCounts[categoryName] || 0) + 1;
@@ -345,14 +372,32 @@ async function calculateTopCategories(
 
 async function calculateTopTreatments(
   bookings: any[],
-  branchId: string | null
+  branchId: string | null,
+  startDate: Date,
+  endDate: Date
 ): Promise<TopTreatmentData[]> {
   const treatmentColors = ["#C1A7A3", "#DCCAB7", "#706C6B"];
+
+  // Filter bookings by date range explicitly
+  const startDateStr = startDate.toISOString().split("T")[0];
+  const endDateStr = endDate.toISOString().split("T")[0];
+  
+  const dateFilteredBookings = bookings.filter((booking) => {
+    if (!booking.booking_date) return false;
+    const bookingDate = booking.booking_date instanceof Date 
+      ? booking.booking_date 
+      : new Date(booking.booking_date);
+    
+    if (isNaN(bookingDate.getTime())) return false;
+    
+    const bookingDateStr = bookingDate.toISOString().split("T")[0];
+    return bookingDateStr >= startDateStr && bookingDateStr <= endDateStr;
+  });
 
   // Count bookings by treatment
   const treatmentCounts: Record<string, number> = {};
   
-  bookings.forEach((booking) => {
+  dateFilteredBookings.forEach((booking) => {
     if (booking.treatment_id) {
       treatmentCounts[booking.treatment_id] = (treatmentCounts[booking.treatment_id] || 0) + 1;
     }
@@ -573,74 +618,155 @@ async function calculateTrends(
   appointmentTrend: number[];
   revenueTrend: number[];
 }> {
-  // Calculate trends based on the date range (last 6 data points)
+  // Calculate trends based on the date range
   const therapistTrend: number[] = [];
   const customerTrend: number[] = [];
   const appointmentTrend: number[] = [];
   const revenueTrend: number[] = [];
 
-  // Group bookings by month within the date range
-  const monthlyData: Record<string, {
+  // Determine grouping period based on date range length
+  const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+  let periodType: "day" | "week" | "month";
+  let periodKey: (date: Date) => string;
+  
+  if (daysDiff <= 30) {
+    // Group by day if range is <= 30 days
+    periodType = "day";
+    periodKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  } else if (daysDiff <= 90) {
+    // Group by week if range is <= 90 days
+    periodType = "week";
+    periodKey = (date: Date) => {
+      const weekStart = new Date(date);
+      weekStart.setDate(date.getDate() - date.getDay()); // Start of week (Sunday)
+      const year = weekStart.getFullYear();
+      const month = String(weekStart.getMonth() + 1).padStart(2, "0");
+      const day = String(weekStart.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`; // Use week start date as key
+    };
+  } else {
+    // Group by month if range is > 90 days
+    periodType = "month";
+    periodKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+  }
+
+  // Group bookings by period within the date range
+  const periodData: Record<string, {
     bookings: any[];
     uniqueCustomers: Set<string>;
     uniqueTherapists: Set<string>;
   }> = {};
 
   bookings.forEach((booking) => {
-    const date = new Date(booking.booking_date);
-    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    if (!booking.booking_date) return;
     
-    if (!monthlyData[monthKey]) {
-      monthlyData[monthKey] = {
+    const date = booking.booking_date instanceof Date 
+      ? booking.booking_date 
+      : new Date(booking.booking_date);
+    
+    if (isNaN(date.getTime())) return;
+    
+    // Filter by date range explicitly
+    const bookingDateStr = date.toISOString().split("T")[0];
+    const startDateStr = startDate.toISOString().split("T")[0];
+    const endDateStr = endDate.toISOString().split("T")[0];
+    
+    if (bookingDateStr < startDateStr || bookingDateStr > endDateStr) {
+      return; // Skip bookings outside date range
+    }
+    
+    const key = periodKey(date);
+    
+    if (!periodData[key]) {
+      periodData[key] = {
         bookings: [],
         uniqueCustomers: new Set(),
         uniqueTherapists: new Set(),
       };
     }
     
-    monthlyData[monthKey].bookings.push(booking);
+    periodData[key].bookings.push(booking);
     if (booking.user_id) {
-      monthlyData[monthKey].uniqueCustomers.add(booking.user_id);
+      periodData[key].uniqueCustomers.add(booking.user_id);
     }
     if (booking.actual_therapist_id || booking.therapist_id) {
-      monthlyData[monthKey].uniqueTherapists.add(booking.actual_therapist_id || booking.therapist_id);
+      periodData[key].uniqueTherapists.add(booking.actual_therapist_id || booking.therapist_id);
     }
   });
 
-  // Get sorted months
-  const sortedMonths = Object.keys(monthlyData).sort();
-  const last6Months = sortedMonths.slice(-6);
+  // Generate all periods within the date range
+  const allPeriods: string[] = [];
+  const current = new Date(startDate);
+  
+  while (current <= endDate) {
+    allPeriods.push(periodKey(new Date(current)));
+    
+    if (periodType === "day") {
+      current.setDate(current.getDate() + 1);
+    } else if (periodType === "week") {
+      current.setDate(current.getDate() + 7);
+    } else {
+      current.setMonth(current.getMonth() + 1);
+    }
+  }
 
-  // Calculate trends for last 6 months
-  last6Months.forEach((monthKey) => {
-    const data = monthlyData[monthKey];
+  // Remove duplicates and sort
+  const uniquePeriods = [...new Set(allPeriods)].sort();
+  
+  // Limit to max 12 data points for readability
+  const maxPoints = 12;
+  const periodsToShow = uniquePeriods.length > maxPoints 
+    ? uniquePeriods.slice(-maxPoints) 
+    : uniquePeriods;
+
+  // Calculate trends for each period
+  periodsToShow.forEach((periodKey) => {
+    const data = periodData[periodKey] || {
+      bookings: [],
+      uniqueCustomers: new Set(),
+      uniqueTherapists: new Set(),
+    };
+    
     appointmentTrend.push(data.bookings.length);
     
-    const monthRevenue = data.bookings.reduce((sum, b) => {
+    const periodRevenue = data.bookings.reduce((sum, b) => {
       const price = typeof b.total_price === "number" 
         ? b.total_price 
         : parseFloat(String(b.total_price || "0"));
       return sum + (isNaN(price) ? 0 : price);
     }, 0);
-    revenueTrend.push(monthRevenue);
+    revenueTrend.push(periodRevenue);
     
     therapistTrend.push(data.uniqueTherapists.size);
     customerTrend.push(data.uniqueCustomers.size);
   });
 
-  // Pad with zeros if less than 6 months
-  while (appointmentTrend.length < 6) {
+  // Ensure we have at least some data points
+  // If we have data but less than 6 points, pad with zeros at the beginning
+  const minPoints = 6;
+  
+  while (appointmentTrend.length < minPoints && appointmentTrend.length > 0) {
     appointmentTrend.unshift(0);
     revenueTrend.unshift(0);
     therapistTrend.unshift(0);
     customerTrend.unshift(0);
   }
+  
+  // If no data at all, return array of zeros
+  if (appointmentTrend.length === 0) {
+    return {
+      therapistTrend: [0, 0, 0, 0, 0, 0],
+      customerTrend: [0, 0, 0, 0, 0, 0],
+      appointmentTrend: [0, 0, 0, 0, 0, 0],
+      revenueTrend: [0, 0, 0, 0, 0, 0],
+    };
+  }
 
   return {
-    therapistTrend: therapistTrend.slice(-6),
-    customerTrend: customerTrend.slice(-6),
-    appointmentTrend: appointmentTrend.slice(-6),
-    revenueTrend: revenueTrend.slice(-6),
+    therapistTrend: therapistTrend.slice(-minPoints),
+    customerTrend: customerTrend.slice(-minPoints),
+    appointmentTrend: appointmentTrend.slice(-minPoints),
+    revenueTrend: revenueTrend.slice(-minPoints),
   };
 }
 

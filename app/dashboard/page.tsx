@@ -29,7 +29,6 @@ import { useDashboardData } from "@/hooks/useDashboardData";
 import { useDashboardAppointments } from "@/hooks/useDashboardAppointments";
 import { useTopCustomers, useCustomerRetention, useCustomerAlerts } from "@/hooks/useDashboardCustomers";
 import { useBranches } from "@/hooks/useBranches";
-import { useTreatmentCategories } from "@/hooks/useTreatmentCategories";
 import { PeriodType } from "@/components/ui/DateRangePicker";
 
 export default function DashboardPage() {
@@ -49,7 +48,6 @@ export default function DashboardPage() {
 
   const [location, setLocation] = useState<string>("");
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [dateRange, setDateRange] = useState({
     start: new Date(new Date().getFullYear(), 0, 1), // Start of year
     end: new Date(), // Today
@@ -57,9 +55,6 @@ export default function DashboardPage() {
 
   // Fetch branches
   const { branches, loading: branchesLoading } = useBranches();
-  
-  // Fetch treatment categories
-  const { categories, loading: categoriesLoading } = useTreatmentCategories();
 
   // Set default branch when branches load
   useEffect(() => {
@@ -80,33 +75,33 @@ export default function DashboardPage() {
     revenueTrend,
     loading: dashboardLoading,
     error: dashboardError,
-  } = useDashboardData(selectedBranchId, dateRange.start, dateRange.end, selectedCategory === "all" ? null : selectedCategory);
+  } = useDashboardData(selectedBranchId, dateRange.start, dateRange.end);
 
 
   // Fetch appointments (fetch all, pagination handled in component)
   const {
     appointments: allAppointments,
     loading: appointmentsLoading,
-  } = useDashboardAppointments(selectedBranchId, 1000);
+  } = useDashboardAppointments(selectedBranchId, 1000, dateRange.start, dateRange.end);
 
   // Fetch top customers
   const {
     customers: topCustomers,
     loading: customersLoading,
-  } = useTopCustomers(selectedBranchId, 5);
+  } = useTopCustomers(selectedBranchId, 5, dateRange.start, dateRange.end);
 
   // Fetch customer retention
   const {
     new: newCustomers,
     returning: returningCustomers,
     loading: retentionLoading,
-  } = useCustomerRetention(selectedBranchId);
+  } = useCustomerRetention(selectedBranchId, dateRange.start, dateRange.end);
 
   // Fetch customer alerts
   const {
     alerts: customerAlerts,
     loading: alertsLoading,
-  } = useCustomerAlerts(selectedBranchId, 5);
+  } = useCustomerAlerts(selectedBranchId, 5, dateRange.start, dateRange.end);
 
   // Handle location change
   const handleLocationChange = (locationName: string) => {
@@ -120,10 +115,6 @@ export default function DashboardPage() {
     setDateRange({ start, end });
   };
 
-  // Handle category change
-  const handleCategoryChange = (category: string) => {
-    setSelectedCategory(category);
-  };
 
   // Apply dark mode class to HTML element and save to localStorage
   useEffect(() => {
@@ -286,9 +277,6 @@ export default function DashboardPage() {
         }
       }}
       onPeriodChange={handlePeriodChange}
-      category={selectedCategory}
-      categories={categories}
-      onCategoryChange={handleCategoryChange}
       isDarkMode={isDarkMode}
       onDarkModeToggle={() => {
         setIsDarkMode((prev) => !prev);
@@ -328,16 +316,16 @@ export default function DashboardPage() {
           <div className="space-y-6">
             <DonutChart
               data={topCategoryData.length > 0 ? topCategoryData : []}
-              totalLabel="Total Customer"
-              totalValue={stats?.customerCount || 0}
+              totalLabel="Total Bookings"
+              totalValue={0}
               title="Top Category"
             />
 
             {/* Top Treatment by Category */}
             <DonutChart
               data={topTreatmentData.length > 0 ? topTreatmentData : []}
-              totalLabel="Total Customer"
-              totalValue={stats?.customerCount || 0}
+              totalLabel="Total Bookings"
+              totalValue={0}
               title="Top Treatment by Category"
             />
           </div>

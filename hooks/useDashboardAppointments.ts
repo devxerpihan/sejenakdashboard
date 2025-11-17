@@ -6,7 +6,9 @@ import { DashboardAppointment } from "@/components/dashboard/AllAppointmentsTabl
 
 export function useDashboardAppointments(
   branchId: string | null,
-  limit: number = 5
+  limit: number = 5,
+  startDate?: Date,
+  endDate?: Date
 ): {
   appointments: DashboardAppointment[];
   loading: boolean;
@@ -22,6 +24,10 @@ export function useDashboardAppointments(
         setLoading(true);
         setError(null);
 
+        // Format dates properly for PostgreSQL date comparison
+        const startDateStr = startDate ? startDate.toISOString().split("T")[0] : undefined;
+        const endDateStr = endDate ? endDate.toISOString().split("T")[0] : undefined;
+
         // Fetch all bookings with pagination, then limit in memory
         let allBookings: any[] = [];
         let page = 0;
@@ -36,6 +42,12 @@ export function useDashboardAppointments(
             .order("booking_time", { ascending: false })
             .range(page * pageSize, (page + 1) * pageSize - 1);
 
+          if (startDateStr) {
+            query = query.gte("booking_date", startDateStr);
+          }
+          if (endDateStr) {
+            query = query.lte("booking_date", endDateStr);
+          }
           if (branchId) {
             query = query.eq("branch_id", branchId);
           }
@@ -60,13 +72,20 @@ export function useDashboardAppointments(
           let hasMoreNull = true;
 
           while (hasMoreNull && allBookings.length + allNullBranchBookings.length < limit) {
-            const nullBookingsQuery = supabase
+            let nullBookingsQuery = supabase
               .from("bookings")
               .select("id, booking_date, booking_time, status, user_id, therapist_id, actual_therapist_id, treatment_id")
               .is("branch_id", null)
               .order("booking_date", { ascending: false })
               .order("booking_time", { ascending: false })
               .range(nullPage * pageSize, (nullPage + 1) * pageSize - 1);
+
+            if (startDateStr) {
+              nullBookingsQuery = nullBookingsQuery.gte("booking_date", startDateStr);
+            }
+            if (endDateStr) {
+              nullBookingsQuery = nullBookingsQuery.lte("booking_date", endDateStr);
+            }
 
             const { data: nullBookings, error: nullError } = await nullBookingsQuery;
 
@@ -243,7 +262,7 @@ export function useDashboardAppointments(
     }
 
     fetchAppointments();
-  }, [branchId, limit]);
+  }, [branchId, limit, startDate, endDate]);
 
   return { appointments, loading, error };
 }

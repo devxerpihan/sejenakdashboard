@@ -17,10 +17,13 @@ export const SejenakStatCard: React.FC<StatCardData> = ({
   };
 
   // Ensure trend is always an array
-  const trendArray = Array.isArray(trend) && trend.length > 0 ? trend : [0];
+  const trendArray = Array.isArray(trend) && trend.length > 0 ? trend : [0, 0, 0, 0, 0, 0];
   
-  const maxValue = Math.max(...trendArray);
-  const minValue = Math.min(...trendArray);
+  // Ensure all values are numbers
+  const numericTrendArray = trendArray.map(v => typeof v === 'number' ? v : Number(v) || 0);
+  
+  const maxValue = Math.max(...numericTrendArray, 1);
+  const minValue = Math.min(...numericTrendArray, 0);
   const range = maxValue - minValue || 1;
 
   return (
@@ -42,33 +45,36 @@ export const SejenakStatCard: React.FC<StatCardData> = ({
         <div className="h-12 mt-4">
           {trendType === "bar" ? (
             <div className="flex items-end gap-1 h-full">
-              {trendArray.map((point, index) => (
-                <div
-                  key={index}
-                  className="flex-1 bg-[#C1A7A3] dark:bg-[#706C6B] rounded-t"
-                  style={{
-                    height: `${((point - minValue) / range) * 100}%`,
-                    minHeight: "4px",
-                  }}
-                />
-              ))}
+              {numericTrendArray.map((point, index) => {
+                const heightPercent = range > 0 ? ((point - minValue) / range) * 100 : 0;
+                return (
+                  <div
+                    key={index}
+                    className="flex-1 bg-[#C1A7A3] dark:bg-[#706C6B] rounded-t"
+                    style={{
+                      height: `${Math.max(heightPercent, 2)}%`,
+                      minHeight: point > 0 ? "4px" : "0px",
+                    }}
+                  />
+                );
+              })}
             </div>
           ) : (
             <svg viewBox="0 0 200 40" className="w-full h-full">
               <defs>
-                <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                <linearGradient id={`areaGradient-${title}`} x1="0%" y1="0%" x2="0%" y2="100%">
                   <stop offset="0%" stopColor="#C1A7A3" stopOpacity="0.3" />
                   <stop offset="100%" stopColor="#C1A7A3" stopOpacity="0" />
                 </linearGradient>
               </defs>
               <polyline
-                fill="url(#areaGradient)"
+                fill={`url(#areaGradient-${title})`}
                 stroke="#C1A7A3"
                 strokeWidth="2"
-                points={trendArray
+                points={numericTrendArray
                   .map(
                     (point, i) =>
-                      `${(i / (trendArray.length - 1 || 1)) * 180 + 10},${38 - ((point - minValue) / range) * 30}`
+                      `${(i / (numericTrendArray.length - 1 || 1)) * 180 + 10},${38 - ((point - minValue) / range) * 30}`
                   )
                   .join(" ")}
               />
@@ -76,10 +82,10 @@ export const SejenakStatCard: React.FC<StatCardData> = ({
                 fill="none"
                 stroke="#C1A7A3"
                 strokeWidth="2"
-                points={trendArray
+                points={numericTrendArray
                   .map(
                     (point, i) =>
-                      `${(i / (trendArray.length - 1 || 1)) * 180 + 10},${38 - ((point - minValue) / range) * 30}`
+                      `${(i / (numericTrendArray.length - 1 || 1)) * 180 + 10},${38 - ((point - minValue) / range) * 30}`
                   )
                   .join(" ")}
               />

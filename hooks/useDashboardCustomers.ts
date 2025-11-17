@@ -7,7 +7,9 @@ import { CustomerAlert as AlertType } from "@/components/dashboard/CustomerAlert
 
 export function useTopCustomers(
   branchId: string | null,
-  limit: number = 5
+  limit: number = 5,
+  startDate?: Date,
+  endDate?: Date
 ): {
   customers: TopCustomer[];
   loading: boolean;
@@ -22,6 +24,10 @@ export function useTopCustomers(
       try {
         setLoading(true);
         setError(null);
+
+        // Format dates properly for PostgreSQL date comparison
+        const startDateStr = startDate ? startDate.toISOString().split("T")[0] : undefined;
+        const endDateStr = endDate ? endDate.toISOString().split("T")[0] : undefined;
 
         // Get all bookings for the branch with pagination
         let allBookings: any[] = [];
@@ -41,6 +47,12 @@ export function useTopCustomers(
             `)
             .range(page * pageSize, (page + 1) * pageSize - 1);
 
+          if (startDateStr) {
+            bookingsQuery = bookingsQuery.gte("booking_date", startDateStr);
+          }
+          if (endDateStr) {
+            bookingsQuery = bookingsQuery.lte("booking_date", endDateStr);
+          }
           if (branchId) {
             bookingsQuery = bookingsQuery.eq("branch_id", branchId);
           }
@@ -67,7 +79,7 @@ export function useTopCustomers(
           let hasMoreNull = true;
 
           while (hasMoreNull) {
-            const nullBookingsQuery = supabase
+            let nullBookingsQuery = supabase
               .from("bookings")
               .select(`
                 id,
@@ -78,6 +90,13 @@ export function useTopCustomers(
               `)
               .is("branch_id", null)
               .range(nullPage * pageSize, (nullPage + 1) * pageSize - 1);
+
+            if (startDateStr) {
+              nullBookingsQuery = nullBookingsQuery.gte("booking_date", startDateStr);
+            }
+            if (endDateStr) {
+              nullBookingsQuery = nullBookingsQuery.lte("booking_date", endDateStr);
+            }
 
             const { data: nullBookings, error: nullError } = await nullBookingsQuery;
 
@@ -166,13 +185,15 @@ export function useTopCustomers(
     }
 
     fetchTopCustomers();
-  }, [branchId, limit]);
+  }, [branchId, limit, startDate, endDate]);
 
   return { customers, loading, error };
 }
 
 export function useCustomerRetention(
-  branchId: string | null
+  branchId: string | null,
+  startDate?: Date,
+  endDate?: Date
 ): {
   new: number;
   returning: number;
@@ -189,6 +210,10 @@ export function useCustomerRetention(
         setLoading(true);
         setError(null);
 
+        // Format dates properly for PostgreSQL date comparison
+        const startDateStr = startDate ? startDate.toISOString().split("T")[0] : undefined;
+        const endDateStr = endDate ? endDate.toISOString().split("T")[0] : undefined;
+
         // Get all bookings with pagination
         let allBookings: any[] = [];
         let page = 0;
@@ -201,6 +226,12 @@ export function useCustomerRetention(
             .select("user_id, booking_date")
             .range(page * pageSize, (page + 1) * pageSize - 1);
 
+          if (startDateStr) {
+            bookingsQuery = bookingsQuery.gte("booking_date", startDateStr);
+          }
+          if (endDateStr) {
+            bookingsQuery = bookingsQuery.lte("booking_date", endDateStr);
+          }
           if (branchId) {
             bookingsQuery = bookingsQuery.eq("branch_id", branchId);
           }
@@ -227,11 +258,18 @@ export function useCustomerRetention(
           let hasMoreNull = true;
 
           while (hasMoreNull) {
-            const nullBookingsQuery = supabase
+            let nullBookingsQuery = supabase
               .from("bookings")
               .select("user_id, booking_date")
               .is("branch_id", null)
               .range(nullPage * pageSize, (nullPage + 1) * pageSize - 1);
+
+            if (startDateStr) {
+              nullBookingsQuery = nullBookingsQuery.gte("booking_date", startDateStr);
+            }
+            if (endDateStr) {
+              nullBookingsQuery = nullBookingsQuery.lte("booking_date", endDateStr);
+            }
 
             const { data: nullBookings, error: nullError } = await nullBookingsQuery;
 
@@ -282,14 +320,16 @@ export function useCustomerRetention(
     }
 
     fetchRetention();
-  }, [branchId]);
+  }, [branchId, startDate, endDate]);
 
   return { ...data, loading, error };
 }
 
 export function useCustomerAlerts(
   branchId: string | null,
-  limit: number = 5
+  limit: number = 5,
+  startDate?: Date,
+  endDate?: Date
 ): {
   alerts: AlertType[];
   loading: boolean;
@@ -305,6 +345,10 @@ export function useCustomerAlerts(
         setLoading(true);
         setError(null);
 
+        // Format dates properly for PostgreSQL date comparison
+        const startDateStr = startDate ? startDate.toISOString().split("T")[0] : undefined;
+        const endDateStr = endDate ? endDate.toISOString().split("T")[0] : undefined;
+
         // Get all bookings with pagination
         let allBookings: any[] = [];
         let page = 0;
@@ -317,6 +361,12 @@ export function useCustomerAlerts(
             .select("user_id, status")
             .range(page * pageSize, (page + 1) * pageSize - 1);
 
+          if (startDateStr) {
+            bookingsQuery = bookingsQuery.gte("booking_date", startDateStr);
+          }
+          if (endDateStr) {
+            bookingsQuery = bookingsQuery.lte("booking_date", endDateStr);
+          }
           if (branchId) {
             bookingsQuery = bookingsQuery.eq("branch_id", branchId);
           }
@@ -343,11 +393,18 @@ export function useCustomerAlerts(
           let hasMoreNull = true;
 
           while (hasMoreNull) {
-            const nullBookingsQuery = supabase
+            let nullBookingsQuery = supabase
               .from("bookings")
               .select("user_id, status")
               .is("branch_id", null)
               .range(nullPage * pageSize, (nullPage + 1) * pageSize - 1);
+
+            if (startDateStr) {
+              nullBookingsQuery = nullBookingsQuery.gte("booking_date", startDateStr);
+            }
+            if (endDateStr) {
+              nullBookingsQuery = nullBookingsQuery.lte("booking_date", endDateStr);
+            }
 
             const { data: nullBookings, error: nullError } = await nullBookingsQuery;
 
@@ -443,7 +500,7 @@ export function useCustomerAlerts(
     }
 
     fetchAlerts();
-  }, [branchId, limit]);
+  }, [branchId, limit, startDate, endDate]);
 
   return { alerts, loading, error };
 }
