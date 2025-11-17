@@ -12,6 +12,11 @@ import {
   StackedBarChart,
   DonutChart,
   TopTherapistList,
+  AllAppointmentsTable,
+  TopCustomerList,
+  CustomerRetentionChart,
+  CustomerAlertsList,
+  RevenueTrendChart,
 } from "@/components/dashboard";
 import {
   ChartIcon,
@@ -164,6 +169,162 @@ export default function DashboardPage() {
     },
   ];
 
+  // All Appointments Data
+  const allAppointments = [
+    {
+      id: "1",
+      customerName: "Patricia",
+      customerAvatar: undefined,
+      therapistName: "Margot Kim",
+      therapistAvatar: undefined,
+      date: "28 May 2025 - 11:15 AM",
+      treatment: "The Prestiges Menicure",
+      status: "confirmed" as const,
+    },
+    {
+      id: "2",
+      customerName: "Grace Wallen",
+      customerAvatar: undefined,
+      therapistName: "Margot Kim",
+      therapistAvatar: undefined,
+      date: "29 May 2025 - 11:30 AM",
+      treatment: "Sejenak Complete Rituals +1",
+      status: "cancelled" as const,
+    },
+    {
+      id: "3",
+      customerName: "Grace Wallen",
+      customerAvatar: undefined,
+      therapistName: "Margot Kim",
+      therapistAvatar: undefined,
+      date: "30 May 2025 - 09:30 AM",
+      treatment: "Sejenak Mini Escape +1",
+      status: "confirmed" as const,
+    },
+    {
+      id: "4",
+      customerName: "Grace Wallen",
+      customerAvatar: undefined,
+      therapistName: "Margot Kim",
+      therapistAvatar: undefined,
+      date: "30 May 2025 - 10:00 AM",
+      treatment: "Sejenak Full Body Indulgence +1",
+      status: "schedule" as const,
+    },
+    {
+      id: "5",
+      customerName: "Margot Kim",
+      customerAvatar: undefined,
+      therapistName: "Margot Kim",
+      therapistAvatar: undefined,
+      date: "30 May 2025 - 11:00 AM",
+      treatment: "The Presiges Pedicure",
+      status: "schedule" as const,
+    },
+  ];
+
+  // Top Customers Data
+  const topCustomers = [
+    {
+      id: "1",
+      name: "Jane Doe",
+      avatar: undefined,
+      totalPaid: 10000000,
+      appointments: 80,
+    },
+    {
+      id: "2",
+      name: "Jane Doe",
+      avatar: undefined,
+      totalPaid: 8000000,
+      appointments: 60,
+    },
+    {
+      id: "3",
+      name: "Jane Doe",
+      avatar: undefined,
+      totalPaid: 6000000,
+      appointments: 45,
+    },
+    {
+      id: "4",
+      name: "Jane Doe",
+      avatar: undefined,
+      totalPaid: 3500000,
+      appointments: 30,
+    },
+    {
+      id: "5",
+      name: "Jane Doe",
+      avatar: undefined,
+      totalPaid: 1500000,
+      appointments: 10,
+    },
+  ];
+
+  // Customer Retention Data
+  const customerRetentionData = {
+    new: 70,
+    returning: 30,
+  };
+
+  // Customer Alerts Data
+  const customerAlerts = [
+    {
+      id: "1",
+      name: "Angel Caroline",
+      avatar: undefined,
+      cancelled: 12,
+      noShow: 2,
+      status: "flagged" as const,
+    },
+    {
+      id: "2",
+      name: "Desy Wallen",
+      avatar: undefined,
+      cancelled: 8,
+      noShow: 3,
+      status: "flagged" as const,
+    },
+    {
+      id: "3",
+      name: "Grace Wallen",
+      avatar: undefined,
+      cancelled: 3,
+      noShow: 2,
+      status: "at-risk" as const,
+    },
+    {
+      id: "4",
+      name: "Ezra Belcher",
+      avatar: undefined,
+      cancelled: 3,
+      noShow: 2,
+      status: "at-risk" as const,
+    },
+    {
+      id: "5",
+      name: "Sandy Katherin",
+      avatar: undefined,
+      cancelled: 3,
+      noShow: 2,
+      status: "at-risk" as const,
+    },
+  ];
+
+  // Revenue Trend Data
+  const revenueTrendData = [
+    { label: "Jan", value: 20000000 },
+    { label: "Feb", value: 22000000 },
+    { label: "Mar", value: 30000000 },
+    { label: "Apr", value: 25000000 },
+    { label: "May", value: 32000000 },
+    { label: "Jun", value: 28000000 },
+    { label: "Jul", value: 29000000 },
+    { label: "Aug", value: 31000000 },
+    { label: "Sept", value: 33000000 },
+  ];
+
   const locations = ["Islamic Village", "Location 2", "Location 3"];
 
   return (
@@ -213,9 +374,8 @@ export default function DashboardPage() {
             <TopTherapistList therapists={therapists} />
           </div>
 
-          {/* Right Column: Top Category and Top Treatment (stacked) */}
+          {/* Right Column: Top Category and Top Treatment by Category */}
           <div className="space-y-6">
-            {/* Top Category */}
             <DonutChart
               data={topCategoryData}
               totalLabel="Total Customer"
@@ -231,6 +391,24 @@ export default function DashboardPage() {
               title="Top Treatment by Category"
             />
           </div>
+        </div>
+
+        {/* Revenue Trend - Full Row */}
+        <RevenueTrendChart data={revenueTrendData} />
+
+        {/* All Appointments - Full Row */}
+        <AllAppointmentsTable appointments={allAppointments} />
+
+        {/* Bottom Section: Top Customer, Customer Retention, Customer Alerts */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Top Customer */}
+          <TopCustomerList customers={topCustomers} />
+
+          {/* Customer Retention */}
+          <CustomerRetentionChart data={customerRetentionData} />
+
+          {/* Customer Alerts */}
+          <CustomerAlertsList customers={customerAlerts} />
         </div>
       </div>
     </SejenakDashboardLayout>

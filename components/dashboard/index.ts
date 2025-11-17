@@ -8,4 +8,9 @@ export { AppointmentSummary } from "./AppointmentSummary";
 export { StackedBarChart } from "./StackedBarChart";
 export { DonutChart } from "./DonutChart";
 export { TopTherapistList } from "./TopTherapistList";
+export { AllAppointmentsTable } from "./AllAppointmentsTable";
+export { TopCustomerList } from "./TopCustomerList";
+export { CustomerRetentionChart } from "./CustomerRetentionChart";
+export { CustomerAlertsList } from "./CustomerAlertsList";
+export { RevenueTrendChart } from "./RevenueTrendChart";
 
