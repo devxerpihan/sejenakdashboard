@@ -230,14 +230,6 @@ export const AppointmentSchedule: React.FC<AppointmentScheduleProps> = ({
 
         {/* Appointment Columns */}
         <div className="flex-1 relative" style={{ minHeight: `${totalHeight}px` }}>
-          {/* Current Time Indicator */}
-          <CurrentTimeIndicator
-            currentTime={currentTime}
-            startHour={startHour}
-            hourHeight={hourHeight}
-            columnCount={columnCount}
-          />
-
           {/* Horizontal grid lines - span across all columns */}
           {timeSlots.map((slot, index) => (
             <div
@@ -254,6 +246,14 @@ export const AppointmentSchedule: React.FC<AppointmentScheduleProps> = ({
           <div
             className="absolute left-0 right-0 bottom-0 border-b border-zinc-200 dark:border-zinc-800 z-0 pointer-events-none"
             style={{ borderBottomWidth: '1px' }}
+          />
+
+          {/* Current Time Indicator - placed after grid lines but above appointments */}
+          <CurrentTimeIndicator
+            currentTime={currentTime}
+            startHour={startHour}
+            hourHeight={hourHeight}
+            columnCount={columnCount}
           />
 
           {/* Columns - Day, Therapist, or Room */}
