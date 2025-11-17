@@ -16,8 +16,11 @@ export const SejenakStatCard: React.FC<StatCardData> = ({
     return val;
   };
 
-  const maxValue = Math.max(...trend);
-  const minValue = Math.min(...trend);
+  // Ensure trend is always an array
+  const trendArray = Array.isArray(trend) && trend.length > 0 ? trend : [0];
+  
+  const maxValue = Math.max(...trendArray);
+  const minValue = Math.min(...trendArray);
   const range = maxValue - minValue || 1;
 
   return (
@@ -39,7 +42,7 @@ export const SejenakStatCard: React.FC<StatCardData> = ({
         <div className="h-12 mt-4">
           {trendType === "bar" ? (
             <div className="flex items-end gap-1 h-full">
-              {trend.map((point, index) => (
+              {trendArray.map((point, index) => (
                 <div
                   key={index}
                   className="flex-1 bg-[#C1A7A3] dark:bg-[#706C6B] rounded-t"
@@ -62,10 +65,10 @@ export const SejenakStatCard: React.FC<StatCardData> = ({
                 fill="url(#areaGradient)"
                 stroke="#C1A7A3"
                 strokeWidth="2"
-                points={trend
+                points={trendArray
                   .map(
                     (point, i) =>
-                      `${(i / (trend.length - 1)) * 180 + 10},${38 - ((point - minValue) / range) * 30}`
+                      `${(i / (trendArray.length - 1 || 1)) * 180 + 10},${38 - ((point - minValue) / range) * 30}`
                   )
                   .join(" ")}
               />
@@ -73,10 +76,10 @@ export const SejenakStatCard: React.FC<StatCardData> = ({
                 fill="none"
                 stroke="#C1A7A3"
                 strokeWidth="2"
-                points={trend
+                points={trendArray
                   .map(
                     (point, i) =>
-                      `${(i / (trend.length - 1)) * 180 + 10},${38 - ((point - minValue) / range) * 30}`
+                      `${(i / (trendArray.length - 1 || 1)) * 180 + 10},${38 - ((point - minValue) / range) * 30}`
                   )
                   .join(" ")}
               />

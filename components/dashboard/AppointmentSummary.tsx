@@ -12,22 +12,27 @@ export const AppointmentSummary: React.FC<AppointmentSummaryProps> = ({
   cancelled,
   completed,
 }) => {
+  // Ensure values are numbers
+  const allCount = typeof all === "number" ? all : 0;
+  const cancelledCount = typeof cancelled === "number" ? cancelled : 0;
+  const completedCount = typeof completed === "number" ? completed : 0;
+
   const cards = [
     {
       label: "All Appointments",
-      value: all,
+      value: allCount,
       color: "bg-blue-500",
       dotColor: "bg-blue-500",
     },
     {
       label: "Cancelled",
-      value: cancelled,
+      value: cancelledCount,
       color: "bg-orange-500",
       dotColor: "bg-orange-500",
     },
     {
       label: "Completed",
-      value: completed,
+      value: completedCount,
       color: "bg-red-500",
       dotColor: "bg-red-500",
     },

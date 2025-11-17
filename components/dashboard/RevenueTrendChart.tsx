@@ -28,14 +28,53 @@ export const RevenueTrendChart: React.FC<RevenueTrendChartProps> = ({
   color = "#C1A7A3",
   areaColor = "#C1A7A3",
 }) => {
-  const maxValue = Math.max(...data.map((d) => d.value));
-  const minValue = 0;
-  const range = maxValue - minValue || 1;
+  // Validate and sanitize data
+  const validData = Array.isArray(data) && data.length > 0 
+    ? data.filter((d) => d && typeof d.value === "number" && !isNaN(d.value))
+    : [];
 
-  // Calculate Y-axis steps (0 to max in increments)
-  const yAxisMax = Math.ceil(maxValue / 8000000) * 8000000; // Round up to nearest 8M
-  const yAxisStep = 8000000;
-  const yAxisSteps = yAxisMax / yAxisStep;
+  // If no valid data, show empty chart
+  if (validData.length === 0) {
+    return (
+      <Card>
+        {title && (
+          <CardHeader>
+            <CardTitle>{title}</CardTitle>
+          </CardHeader>
+        )}
+        <CardContent>
+          <div className="flex items-center justify-center h-64 text-[#706C6B] dark:text-[#C1A7A3]">
+            No revenue data available
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const maxValue = Math.max(...validData.map((d) => d.value));
+  const minValue = 0;
+  
+  // Ensure maxValue is valid and at least 1 to avoid division by zero
+  const safeMaxValue = isNaN(maxValue) || maxValue <= 0 ? 1 : maxValue;
+
+  // Calculate Y-axis with smart step sizing to avoid crowding (max 5 labels)
+  // Find appropriate step size based on max value
+  const maxLabels = 5;
+  const rawStep = safeMaxValue / maxLabels;
+  
+  // Round to nice numbers (1, 2, 5, 10, 20, 50, 100, etc. multiplied by appropriate power of 10)
+  const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
+  const normalized = rawStep / magnitude;
+  let niceStep: number;
+  
+  if (normalized <= 1) niceStep = 1 * magnitude;
+  else if (normalized <= 2) niceStep = 2 * magnitude;
+  else if (normalized <= 5) niceStep = 5 * magnitude;
+  else niceStep = 10 * magnitude;
+  
+  const yAxisMax = Math.ceil(safeMaxValue / niceStep) * niceStep || niceStep;
+  const yAxisStep = niceStep;
+  const yAxisSteps = Math.min(maxLabels, Math.ceil(yAxisMax / yAxisStep)); // Max 5 steps
 
   const height = 300;
   const labelAreaWidth = 120; // Space for Y-axis labels on the left
@@ -49,12 +88,12 @@ export const RevenueTrendChart: React.FC<RevenueTrendChartProps> = ({
   const chartHeight = height - topPadding - bottomPadding;
 
   // Calculate points for the line
-  const points = data.map(
-    (d, i) =>
-      `${leftPadding + (i / (data.length - 1)) * chartWidth},${
-        topPadding + chartHeight - ((d.value - minValue) / yAxisMax) * chartHeight
-      }`
-  );
+  const points = validData.map((d, i) => {
+    const x = leftPadding + (i / Math.max(1, validData.length - 1)) * chartWidth;
+    const valueRatio = yAxisMax > 0 ? (d.value - minValue) / yAxisMax : 0;
+    const y = topPadding + chartHeight - valueRatio * chartHeight;
+    return `${x},${y}`;
+  });
 
   // Create area fill points
   const areaPoints = [
@@ -83,17 +122,19 @@ export const RevenueTrendChart: React.FC<RevenueTrendChartProps> = ({
             {/* Y-axis grid lines and labels */}
             {Array.from({ length: yAxisSteps + 1 }).map((_, i) => {
               const value = i * yAxisStep;
-              const y =
-                topPadding +
-                chartHeight -
-                ((value - minValue) / yAxisMax) * chartHeight;
+              const valueRatio = yAxisMax > 0 ? (value - minValue) / yAxisMax : 0;
+              const y = topPadding + chartHeight - valueRatio * chartHeight;
+              
+              // Ensure y is a valid number
+              const safeY = isNaN(y) ? topPadding + chartHeight : y;
+              
               return (
                 <g key={i}>
                   <line
                     x1={leftPadding}
-                    y1={y}
+                    y1={safeY}
                     x2={leftPadding + chartWidth}
-                    y2={y}
+                    y2={safeY}
                     stroke="#E5E7EB"
                     strokeWidth="1"
                     strokeDasharray="4 4"
@@ -101,9 +142,9 @@ export const RevenueTrendChart: React.FC<RevenueTrendChartProps> = ({
                   />
                   <text
                     x={leftPadding - 10}
-                    y={y + 4}
+                    y={safeY + 4}
                     textAnchor="end"
-                    className="text-xs fill-[#706C6B] dark:fill-[#C1A7A3]"
+                    className="text-xs fill-[#706C6B] dark:text-[#C1A7A3]"
                   >
                     {formatCurrency(value)}
                   </text>
@@ -123,17 +164,20 @@ export const RevenueTrendChart: React.FC<RevenueTrendChartProps> = ({
             />
 
             {/* Data points */}
-            {data.map((d, i) => {
-              const x = leftPadding + (i / (data.length - 1)) * chartWidth;
-              const y =
-                topPadding +
-                chartHeight -
-                ((d.value - minValue) / yAxisMax) * chartHeight;
+            {validData.map((d, i) => {
+              const x = leftPadding + (i / Math.max(1, validData.length - 1)) * chartWidth;
+              const valueRatio = yAxisMax > 0 ? (d.value - minValue) / yAxisMax : 0;
+              const y = topPadding + chartHeight - valueRatio * chartHeight;
+              
+              // Ensure x and y are valid numbers
+              const safeX = isNaN(x) ? leftPadding : x;
+              const safeY = isNaN(y) ? topPadding + chartHeight : y;
+              
               return (
                 <g key={i}>
                   <circle
-                    cx={x}
-                    cy={y}
+                    cx={safeX}
+                    cy={safeY}
                     r="5"
                     fill={color}
                     stroke="white"
@@ -145,12 +189,13 @@ export const RevenueTrendChart: React.FC<RevenueTrendChartProps> = ({
             })}
 
             {/* X-axis labels */}
-            {data.map((d, i) => {
-              const x = leftPadding + (i / (data.length - 1)) * chartWidth;
+            {validData.map((d, i) => {
+              const x = leftPadding + (i / Math.max(1, validData.length - 1)) * chartWidth;
+              const safeX = isNaN(x) ? leftPadding : x;
               return (
                 <text
                   key={i}
-                  x={x}
+                  x={safeX}
                   y={height - bottomPadding + 20}
                   textAnchor="middle"
                   className="text-xs fill-[#706C6B] dark:fill-[#C1A7A3]"

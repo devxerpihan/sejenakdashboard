@@ -1,9 +1,10 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Avatar } from "@/components/ui/Avatar";
 import { AppointmentStatusBadge } from "@/components/appointment/AppointmentStatusBadge";
+import { Pagination } from "@/components/services/Pagination";
 import Link from "next/link";
 
 export interface DashboardAppointment {
@@ -28,6 +29,13 @@ export const AllAppointmentsTable: React.FC<AllAppointmentsTableProps> = ({
   title = "All Appointments",
   viewAllLink = "/appointment",
 }) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(appointments.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedAppointments = appointments.slice(startIndex, endIndex);
+
   const getStatusBadge = (status: DashboardAppointment["status"]) => {
     // Map dashboard statuses to appointment statuses
     const statusMap: Record<string, "completed" | "check-in" | "pending" | "cancelled"> = {
@@ -107,7 +115,14 @@ export const AllAppointmentsTable: React.FC<AllAppointmentsTableProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-              {appointments.map((appointment) => (
+              {paginatedAppointments.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center text-sm text-[#706C6B] dark:text-[#C1A7A3]">
+                    No appointments found
+                  </td>
+                </tr>
+              ) : (
+                paginatedAppointments.map((appointment) => (
                 <tr
                   key={appointment.id}
                   className="hover:bg-[#F0EEED] dark:hover:bg-[#3D3B3A] transition-colors"
@@ -156,10 +171,20 @@ export const AllAppointmentsTable: React.FC<AllAppointmentsTableProps> = ({
                     </span>
                   </td>
                 </tr>
-              ))}
+                ))
+              )}
             </tbody>
           </table>
         </div>
+        {appointments.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={appointments.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+          />
+        )}
       </CardContent>
     </Card>
   );

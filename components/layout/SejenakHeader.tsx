@@ -20,6 +20,7 @@ interface SejenakHeaderProps {
   onLocationChange: (location: string) => void;
   dateRange: { start: Date; end: Date };
   onDateRangeChange: (direction: "prev" | "next") => void;
+  onPeriodChange?: (period: import("@/components/ui/DateRangePicker").PeriodType, start: Date, end: Date) => void;
 }
 
 // Top Header Bar - Full width
@@ -174,6 +175,7 @@ export const OverviewBar: React.FC<{
   onLocationChange: (location: string) => void;
   dateRange: { start: Date; end: Date };
   onDateRangeChange: (direction: "prev" | "next") => void;
+  onPeriodChange?: (period: import("@/components/ui/DateRangePicker").PeriodType, start: Date, end: Date) => void;
   viewSwitcher?: React.ReactNode;
 }> = ({
   title,
@@ -182,6 +184,7 @@ export const OverviewBar: React.FC<{
   onLocationChange,
   dateRange,
   onDateRangeChange,
+  onPeriodChange,
   viewSwitcher,
 }) => {
   return (
@@ -199,6 +202,7 @@ export const OverviewBar: React.FC<{
           startDate={dateRange.start}
           endDate={dateRange.end}
           onNavigate={onDateRangeChange}
+          onPeriodChange={onPeriodChange}
         />
         {viewSwitcher}
       </div>
@@ -214,6 +218,7 @@ export const SejenakHeader: React.FC<SejenakHeaderProps> = ({
   onLocationChange,
   dateRange,
   onDateRangeChange,
+  onPeriodChange,
 }) => {
   return (
     <>
@@ -225,6 +230,7 @@ export const SejenakHeader: React.FC<SejenakHeaderProps> = ({
         onLocationChange={onLocationChange}
         dateRange={dateRange}
         onDateRangeChange={onDateRangeChange}
+        onPeriodChange={onPeriodChange}
       />
     </>
   );
