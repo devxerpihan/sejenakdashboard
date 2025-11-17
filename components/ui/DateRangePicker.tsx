@@ -67,8 +67,13 @@ const getPeriodDates = (period: PeriodType): { start: Date; end: Date } => {
         start: new Date(today.getFullYear() - 1, 0, 1),
         end: new Date(today.getFullYear() - 1, 11, 31),
       };
+    case "custom":
     default:
-      return { start: startDate, end: endDate };
+      // For custom or unknown periods, return current month
+      return {
+        start: new Date(today.getFullYear(), today.getMonth(), 1),
+        end: today,
+      };
   }
 };
 

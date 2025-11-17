@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { TopCustomer, CustomerAlert } from "@/components/dashboard/TopCustomerList";
+import { TopCustomer } from "@/components/dashboard/TopCustomerList";
 import { CustomerAlert as AlertType } from "@/components/dashboard/CustomerAlertsList";
 
 export function useTopCustomers(

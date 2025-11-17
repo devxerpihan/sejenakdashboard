@@ -233,15 +233,6 @@ export function useDashboardData(
 
         // Calculate trends based on date range
         const trends = await calculateTrends(filteredBookings, branchId, startDate, endDate);
-        
-        // Debug: Log trends to verify they're being calculated
-        console.log("Trends calculated:", {
-          therapistTrend: trends.therapistTrend,
-          customerTrend: trends.customerTrend,
-          appointmentTrend: trends.appointmentTrend,
-          revenueTrend: trends.revenueTrend,
-          bookingsCount: filteredBookings.length,
-        });
 
         setStats({
           therapistCount: therapistCount || 0,
