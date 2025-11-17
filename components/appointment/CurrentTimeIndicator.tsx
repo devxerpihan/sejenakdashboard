@@ -24,17 +24,14 @@ export const CurrentTimeIndicator: React.FC<CurrentTimeIndicatorProps> = ({
 
   return (
     <div
-      className="absolute left-0 right-0 z-10 pointer-events-none"
+      className="absolute left-0 right-0 z-50 pointer-events-none"
       style={{ top: `${topPosition}px` }}
     >
-      <div className="flex">
-        {/* Time axis spacer */}
-        <div className="w-20" />
-        {/* Red line across all columns */}
-        <div className="flex-1 relative">
-          <div className="absolute left-0 right-0 h-0.5 bg-red-500" />
-          <div className="absolute left-0 top-0 w-2 h-2 bg-red-500 rounded-full -translate-x-1 -translate-y-1" />
-        </div>
+      {/* Red line across all columns */}
+      <div className="relative w-full">
+        <div className="absolute left-0 right-0 h-0.5 bg-red-500" />
+        {/* Red dot on the left edge */}
+        <div className="absolute left-0 top-0 w-2 h-2 bg-red-500 rounded-full -translate-x-1 -translate-y-1" />
       </div>
     </div>
   );

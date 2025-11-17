@@ -10,6 +10,7 @@ interface AppointmentHeaderProps {
   title: string;
   dateRange: { start: Date; end: Date };
   onDateRangeChange: (direction: "prev" | "next") => void;
+  onPeriodChange?: (period: import("@/components/ui/DateRangePicker").PeriodType, start: Date, end: Date) => void;
   currentView: ViewMode;
   onViewChange: (view: ViewMode) => void;
   onNewAppointment?: () => void;
@@ -21,6 +22,7 @@ export const AppointmentHeader: React.FC<AppointmentHeaderProps> = ({
   title,
   dateRange,
   onDateRangeChange,
+  onPeriodChange,
   currentView,
   onViewChange,
   onNewAppointment,
@@ -84,6 +86,7 @@ export const AppointmentHeader: React.FC<AppointmentHeaderProps> = ({
           startDate={dateRange.start}
           endDate={dateRange.end}
           onNavigate={onDateRangeChange}
+          onPeriodChange={onPeriodChange}
         />
         <ViewSwitcher currentView={currentView} onViewChange={onViewChange} />
       </div>

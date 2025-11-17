@@ -6,7 +6,9 @@ export interface Appointment {
   patientName: string;
   startTime: string; // Format: "HH:mm"
   endTime: string; // Format: "HH:mm"
+  bookingDate: string; // Format: "YYYY-MM-DD" - date of the appointment
   room: string;
+  roomId?: string; // Room ID for filtering
   therapistId: string;
   status?: "completed" | "check-in" | "pending" | "cancelled";
   color?: string; // Card background color

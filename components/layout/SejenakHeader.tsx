@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useUser, useClerk } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/ui/Avatar";
+import { useProfile } from "@/hooks/useProfile";
 import {
   SearchIcon,
   CommandIcon,
@@ -31,12 +32,22 @@ export const TopHeaderBar: React.FC<{
   const { user } = useUser();
   const { signOut } = useClerk();
   const router = useRouter();
+  const { profile } = useProfile();
   const [showUserMenu, setShowUserMenu] = useState(false);
   
+  // Get avatar: prefer profile avatar_url, fallback to Clerk imageUrl
+  const avatarUrl = profile?.avatar_url || user?.imageUrl || undefined;
+  
+  // Get name: prefer profile full_name, fallback to Clerk name
+  const userName = profile?.full_name || user?.fullName || user?.firstName || (user?.emailAddresses && user.emailAddresses[0]?.emailAddress) || "User";
+  
+  // Get email: prefer profile email, fallback to Clerk email
+  const userEmail = profile?.email || (user?.emailAddresses && user.emailAddresses[0]?.emailAddress) || undefined;
+  
   const userData = user ? {
-    name: user.fullName || user.firstName || (user.emailAddresses && user.emailAddresses[0]?.emailAddress) || "User",
-    email: user.emailAddresses && user.emailAddresses[0]?.emailAddress,
-    avatar: user.imageUrl,
+    name: userName,
+    email: userEmail,
+    avatar: avatarUrl,
   } : undefined;
 
   const handleSignOut = async () => {

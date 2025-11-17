@@ -6,5 +6,6 @@ export { TherapistHeader } from "./TherapistHeader";
 export { CurrentTimeIndicator } from "./CurrentTimeIndicator";
 export { ViewSwitcher } from "./ViewSwitcher";
 export { AppointmentHeader } from "./AppointmentHeader";
+export { AppointmentListView } from "./AppointmentListView";
 export { Footer } from "./Footer";
 
