@@ -17,6 +17,15 @@ export function useProfile() {
     }
 
     async function fetchOrCreateProfile() {
+      // TypeScript guard: ensure user is not null
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      // Store user.id in a variable to help TypeScript understand it's not null
+      const userId = user.id;
+
       try {
         setLoading(true);
         setError(null);
@@ -25,7 +34,7 @@ export function useProfile() {
         const { data: existingProfile, error: fetchError } = await supabase
           .from("profiles")
           .select("*")
-          .eq("clerk_id", user.id)
+          .eq("clerk_id", userId)
           .single();
 
         if (fetchError) {
@@ -46,7 +55,7 @@ export function useProfile() {
 
         // Create new profile if it doesn't exist
         const profileData = {
-          clerk_id: user.id,
+          clerk_id: userId,
           full_name: user.fullName || user.firstName || null,
           email: user.emailAddresses[0]?.emailAddress || null,
           avatar_url: user.imageUrl || null,
@@ -72,7 +81,7 @@ export function useProfile() {
             const { data: createdProfile, error: fetchError } = await supabase
               .from("profiles")
               .select("*")
-              .eq("clerk_id", user.id)
+              .eq("clerk_id", userId)
               .single();
             
             if (createdProfile && !fetchError) {
