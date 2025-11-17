@@ -1,6 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
+import { useUser, useClerk } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/ui/Avatar";
 import {
   SearchIcon,
@@ -18,23 +20,28 @@ interface SejenakHeaderProps {
   onLocationChange: (location: string) => void;
   dateRange: { start: Date; end: Date };
   onDateRangeChange: (direction: "prev" | "next") => void;
-  user?: {
-    name: string;
-    email?: string;
-    avatar?: string;
-  };
 }
 
 // Top Header Bar - Full width
 export const TopHeaderBar: React.FC<{
-  user?: {
-    name: string;
-    email?: string;
-    avatar?: string;
-  };
   onSidebarToggle?: () => void;
   isSidebarOpen?: boolean;
-}> = ({ user, onSidebarToggle, isSidebarOpen = true }) => {
+}> = ({ onSidebarToggle, isSidebarOpen = true }) => {
+  const { user } = useUser();
+  const { signOut } = useClerk();
+  const router = useRouter();
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  
+  const userData = user ? {
+    name: user.fullName || user.firstName || (user.emailAddresses && user.emailAddresses[0]?.emailAddress) || "User",
+    email: user.emailAddresses && user.emailAddresses[0]?.emailAddress,
+    avatar: user.imageUrl,
+  } : undefined;
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.push("/");
+  };
   return (
     <div className="h-16 flex items-center border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#191919]">
       {/* Logo on far left */}
@@ -116,8 +123,43 @@ export const TopHeaderBar: React.FC<{
           </svg>
           <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full" />
         </button>
-        {user && (
-          <Avatar src={user.avatar} name={user.name} size="md" />
+        {userData && (
+          <div className="relative">
+            <button
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className="flex items-center gap-2 hover:bg-[#F0EEED] dark:hover:bg-[#3D3B3A] rounded-lg p-1 transition-colors"
+            >
+              <Avatar src={userData.avatar} name={userData.name} size="md" />
+            </button>
+            {showUserMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setShowUserMenu(false)}
+                />
+                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-[#3D3B3A] rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-800 z-20">
+                  <div className="p-4 border-b border-zinc-200 dark:border-zinc-800">
+                    <p className="text-sm font-semibold text-[#191919] dark:text-[#F0EEED]">
+                      {userData.name}
+                    </p>
+                    {userData.email && (
+                      <p className="text-xs text-[#706C6B] dark:text-[#C1A7A3] mt-1">
+                        {userData.email}
+                      </p>
+                    )}
+                  </div>
+                  <div className="p-2">
+                    <button
+                      onClick={handleSignOut}
+                      className="w-full text-left px-3 py-2 text-sm text-[#191919] dark:text-[#F0EEED] hover:bg-[#F0EEED] dark:hover:bg-[#5A5756] rounded-lg transition-colors"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         )}
       </div>
     </div>
@@ -172,11 +214,10 @@ export const SejenakHeader: React.FC<SejenakHeaderProps> = ({
   onLocationChange,
   dateRange,
   onDateRangeChange,
-  user,
 }) => {
   return (
     <>
-      <TopHeaderBar user={user} />
+      <TopHeaderBar />
       <OverviewBar
         title={title}
         location={location}

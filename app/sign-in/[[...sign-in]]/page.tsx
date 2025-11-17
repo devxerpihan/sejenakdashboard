@@ -1,0 +1,29 @@
+'use client'
+
+import { AuthModal } from '@/components/auth/AuthModal'
+import { Suspense } from 'react'
+
+function SignInContent() {
+  return (
+    <AuthModal 
+      isOpen={true} 
+      onClose={() => {}} 
+      fullPage={true}
+      defaultMode="signIn"
+    />
+  )
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+        </div>
+      </div>
+    }>
+      <SignInContent />
+    </Suspense>
+  )
+}

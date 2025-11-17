@@ -11,7 +11,7 @@ import {
 } from "@/components/icons";
 import { NavItem } from "@/types/sejenak";
 
-export const navItems: NavItem[] = [
+const allNavItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: <DashboardIcon /> },
   { label: "Appointment", href: "/appointment", icon: <AppointmentIcon /> },
   {
@@ -70,4 +70,34 @@ export const navItems: NavItem[] = [
     ],
   },
 ];
+
+// Customer-only navigation items (only Dashboard)
+const customerNavItems: NavItem[] = [
+  { label: "Dashboard", href: "/dashboard", icon: <DashboardIcon /> },
+];
+
+/**
+ * Get navigation items filtered by user role
+ * @param role - User role from profile (customer, therapist, receptionist, cook_helper, super_admin)
+ * @returns Filtered navigation items
+ */
+export function getNavItems(role?: string | null): NavItem[] {
+  // Customers only see Dashboard
+  if (role === "customer") {
+    return customerNavItems;
+  }
+  
+  // Only super_admin sees all items
+  if (role === "super_admin") {
+    return allNavItems;
+  }
+  
+  // Other roles (therapist, receptionist, cook_helper) see limited items
+  // For now, return empty array - you can customize this later
+  // Or return a subset like: [Dashboard, Appointment]
+  return [];
+}
+
+// Export all items for backward compatibility
+export const navItems = allNavItems;
 

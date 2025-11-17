@@ -8,9 +8,12 @@ import {
   AppointmentHeader,
 } from "@/components/appointment";
 import { Appointment, Therapist, ViewMode } from "@/types/appointment";
-import { navItems } from "@/config/navigation";
+import { getNavItems } from "@/config/navigation";
+import { useProfile } from "@/hooks/useProfile";
 
 export default function AppointmentPage() {
+  const { profile } = useProfile();
+  
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("darkMode");
@@ -222,7 +225,7 @@ export default function AppointmentPage() {
 
   return (
     <SejenakDashboardLayout
-      navItems={navItems}
+      navItems={getNavItems(profile?.role)}
       headerTitle="Appointment"
       location={location}
       locations={locations}
@@ -231,11 +234,6 @@ export default function AppointmentPage() {
       onDateRangeChange={(direction) => {
         // Simple navigation - in real app, this would update dates properly
         console.log("Navigate", direction);
-      }}
-      user={{
-        name: "John Doe",
-        email: "john@example.com",
-        avatar: undefined,
       }}
       isDarkMode={isDarkMode}
       onDarkModeToggle={() => {

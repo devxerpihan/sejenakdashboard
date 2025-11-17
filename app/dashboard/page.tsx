@@ -1,6 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useUser, useAuth } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
+import { useProfile } from "@/hooks/useProfile";
 import { SejenakDashboardLayout } from "@/components/layout/SejenakDashboardLayout";
 import { Footer } from "@/components/layout";
 import {
@@ -15,9 +18,15 @@ import {
   UsersIcon,
   AppointmentIcon,
 } from "@/components/icons";
-import { navItems } from "@/config/navigation";
+import { getNavItems } from "@/config/navigation";
+import CustomerDashboard from "@/components/customer/CustomerDashboard";
 
 export default function DashboardPage() {
+  const { user, isLoaded: userLoaded } = useUser();
+  const { isSignedIn } = useAuth();
+  const router = useRouter();
+  const { profile, loading: profileLoading } = useProfile();
+
   const [isDarkMode, setIsDarkMode] = useState(() => {
     // Initialize from localStorage if available, default to false (light mode)
     if (typeof window !== "undefined") {
@@ -43,6 +52,36 @@ export default function DashboardPage() {
       localStorage.setItem("darkMode", "false");
     }
   }, [isDarkMode]);
+
+  useEffect(() => {
+    if (userLoaded && !isSignedIn) {
+      router.push("/?redirect=/dashboard");
+    }
+  }, [userLoaded, isSignedIn, router]);
+
+  // Redirect based on role
+  useEffect(() => {
+    if (profile && profile.role === "customer") {
+      // Customer should see their own dashboard, not admin dashboard
+      // We'll show customer view in the same route
+    }
+  }, [profile]);
+
+  if (!userLoaded || !isSignedIn || profileLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#C1A7A3] mx-auto mb-4"></div>
+          <p className="text-[#706C6B] dark:text-[#C1A7A3]">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show customer dashboard if user is a customer
+  if (profile?.role === "customer") {
+    return <CustomerDashboard profile={profile} />;
+  }
 
   // Stat Cards Data
   const statCards = [
@@ -129,7 +168,7 @@ export default function DashboardPage() {
 
   return (
     <SejenakDashboardLayout
-      navItems={navItems}
+      navItems={getNavItems(profile?.role)}
       headerTitle="Overview Dashboard"
       location={location}
       locations={locations}
@@ -138,11 +177,6 @@ export default function DashboardPage() {
       onDateRangeChange={(direction) => {
         // Simple navigation - in real app, this would update dates properly
         console.log("Navigate", direction);
-      }}
-      user={{
-        name: "John Doe",
-        email: "john@example.com",
-        avatar: undefined,
       }}
       isDarkMode={isDarkMode}
       onDarkModeToggle={() => {

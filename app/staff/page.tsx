@@ -165,11 +165,6 @@ export default function StaffPage() {
       onDateRangeChange={(direction) => {
         console.log("Navigate", direction);
       }}
-      user={{
-        name: "John Doe",
-        email: "john@example.com",
-        avatar: undefined,
-      }}
       isDarkMode={isDarkMode}
       onDarkModeToggle={() => {
         setIsDarkMode((prev) => !prev);

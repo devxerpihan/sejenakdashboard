@@ -14,11 +14,6 @@ interface SejenakDashboardLayoutProps {
   onLocationChange: (location: string) => void;
   dateRange: { start: Date; end: Date };
   onDateRangeChange: (direction: "prev" | "next") => void;
-  user?: {
-    name: string;
-    email?: string;
-    avatar?: string;
-  };
   isDarkMode: boolean;
   onDarkModeToggle: () => void;
   viewSwitcher?: React.ReactNode;
@@ -35,7 +30,6 @@ export const SejenakDashboardLayout: React.FC<SejenakDashboardLayoutProps> = ({
   onLocationChange,
   dateRange,
   onDateRangeChange,
-  user,
   isDarkMode,
   onDarkModeToggle,
   viewSwitcher,
@@ -48,7 +42,6 @@ export const SejenakDashboardLayout: React.FC<SejenakDashboardLayoutProps> = ({
     <div className="flex flex-col h-screen bg-zinc-50 dark:bg-zinc-950 overflow-hidden">
       {/* Top Header Bar - Full width */}
       <TopHeaderBar 
-        user={user} 
         onSidebarToggle={() => setIsSidebarOpen(!isSidebarOpen)}
         isSidebarOpen={isSidebarOpen}
       />
