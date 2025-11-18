@@ -69,31 +69,63 @@ export const AppointmentSchedule: React.FC<AppointmentScheduleProps> = ({
     return { top, height };
   };
 
+  // Sort appointments by start time (earlier times first, so later appointments get higher z-index)
+  const sortAppointmentsByTime = (apts: Appointment[]) => {
+    return [...apts].sort((a, b) => {
+      // Compare by start time (earlier times come first)
+      const [aHour, aMin] = a.startTime.split(":").map(Number);
+      const [bHour, bMin] = b.startTime.split(":").map(Number);
+      const aMinutes = aHour * 60 + aMin;
+      const bMinutes = bHour * 60 + bMin;
+      
+      if (aMinutes !== bMinutes) {
+        return aMinutes - bMinutes; // Earlier times first
+      }
+      
+      // If same start time, compare by end time
+      const [aEndHour, aEndMin] = a.endTime.split(":").map(Number);
+      const [bEndHour, bEndMin] = b.endTime.split(":").map(Number);
+      const aEndMinutes = aEndHour * 60 + aEndMin;
+      const bEndMinutes = bEndHour * 60 + bEndMin;
+      
+      return aEndMinutes - bEndMinutes; // Earlier end times first
+    });
+  };
+
   // Get appointments for a specific therapist
   const getAppointmentsForTherapist = (therapistId: string) => {
+    let filtered: Appointment[];
     if (therapistId === "__unassigned__") {
       // Return appointments without therapist_id
-      return appointments.filter((apt) => !apt.therapistId || apt.therapistId === "");
+      filtered = appointments.filter((apt) => !apt.therapistId || apt.therapistId === "");
+    } else {
+      filtered = appointments.filter((apt) => apt.therapistId === therapistId);
     }
-    return appointments.filter((apt) => apt.therapistId === therapistId);
+    return sortAppointmentsByTime(filtered);
   };
 
   // Get appointments for a specific room
   const getAppointmentsForRoom = (roomId: string) => {
+    let filtered: Appointment[];
     if (roomId === "__unassigned__") {
       // Return appointments without room_id
-      return appointments.filter((apt) => !apt.roomId || apt.roomId === undefined);
+      filtered = appointments.filter((apt) => !apt.roomId || apt.roomId === undefined);
+    } else {
+      filtered = appointments.filter((apt) => apt.roomId === roomId);
     }
-    return appointments.filter((apt) => apt.roomId === roomId);
+    return sortAppointmentsByTime(filtered);
   };
 
   // Get appointments for a specific day
   const getAppointmentsForDay = (dateStr: string) => {
-    return appointments.filter((apt) => {
+    const filtered = appointments.filter((apt) => {
       if (!apt.bookingDate) return false;
-      const aptDateStr = apt.bookingDate.split("T")[0];
+      // Ensure we're comparing just the date part (YYYY-MM-DD)
+      // Remove any time component if present
+      const aptDateStr = apt.bookingDate.split("T")[0].split(" ")[0];
       return aptDateStr === dateStr;
     });
+    return sortAppointmentsByTime(filtered);
   };
 
   // Generate day columns for week view
@@ -104,12 +136,17 @@ export const AppointmentSchedule: React.FC<AppointmentScheduleProps> = ({
 
     const days: DayColumn[] = [];
     const current = new Date(dateRange.start);
+    current.setHours(0, 0, 0, 0); // Normalize to start of day
     const end = new Date(dateRange.end);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    end.setHours(23, 59, 59, 999); // Normalize to end of day
 
     while (current <= end) {
-      const dateStr = current.toISOString().split("T")[0];
+      // Format date without timezone conversion to avoid date shifts
+      const year = current.getFullYear();
+      const month = String(current.getMonth() + 1).padStart(2, "0");
+      const day = String(current.getDate()).padStart(2, "0");
+      const dateStr = `${year}-${month}-${day}`;
+      
       days.push({
         date: new Date(current),
         dateStr,
@@ -266,16 +303,19 @@ export const AppointmentSchedule: React.FC<AppointmentScheduleProps> = ({
                   style={{ height: `${totalHeight}px` }}
                 >
                   {/* Appointments for this day */}
-                  {getAppointmentsForDay(day.dateStr).map((appointment) => {
+                  {getAppointmentsForDay(day.dateStr).map((appointment, index) => {
                     const { top, height } = getAppointmentPosition(appointment);
+                    // Later appointments (lower index after sorting) get higher z-index
+                    const zIndex = 20 + index;
                     return (
                       <div
                         key={appointment.id}
-                        className="absolute left-1 right-1 z-20"
+                        className="absolute left-1 right-1"
                         style={{ 
                           top: `${top}px`, 
                           height: `${height}px`,
-                          minHeight: `${height}px`
+                          minHeight: `${height}px`,
+                          zIndex: zIndex
                         }}
                       >
                         <AppointmentCard appointment={appointment} />
@@ -292,16 +332,19 @@ export const AppointmentSchedule: React.FC<AppointmentScheduleProps> = ({
                   style={{ height: `${totalHeight}px` }}
                 >
                   {/* Appointments for this room */}
-                  {getAppointmentsForRoom(room.id).map((appointment) => {
+                  {getAppointmentsForRoom(room.id).map((appointment, index) => {
                     const { top, height } = getAppointmentPosition(appointment);
+                    // Later appointments (lower index after sorting) get higher z-index
+                    const zIndex = 20 + index;
                     return (
                       <div
                         key={appointment.id}
-                        className="absolute left-1 right-1 z-20"
+                        className="absolute left-1 right-1"
                         style={{ 
                           top: `${top}px`, 
                           height: `${height}px`,
-                          minHeight: `${height}px`
+                          minHeight: `${height}px`,
+                          zIndex: zIndex
                         }}
                       >
                         <AppointmentCard appointment={appointment} />
@@ -318,16 +361,19 @@ export const AppointmentSchedule: React.FC<AppointmentScheduleProps> = ({
                   style={{ height: `${totalHeight}px` }}
                 >
                   {/* Appointments for this therapist */}
-                  {getAppointmentsForTherapist(therapist.id).map((appointment) => {
+                  {getAppointmentsForTherapist(therapist.id).map((appointment, index) => {
                     const { top, height } = getAppointmentPosition(appointment);
+                    // Later appointments (lower index after sorting) get higher z-index
+                    const zIndex = 20 + index;
                     return (
                       <div
                         key={appointment.id}
-                        className="absolute left-1 right-1 z-20"
+                        className="absolute left-1 right-1"
                         style={{ 
                           top: `${top}px`, 
                           height: `${height}px`,
-                          minHeight: `${height}px`
+                          minHeight: `${height}px`,
+                          zIndex: zIndex
                         }}
                       >
                         <AppointmentCard appointment={appointment} />

@@ -295,13 +295,30 @@ export function useAppointments(
             // Assign color based on index
             const color = colors[index % colors.length];
 
+            // Format booking_date to ensure it's in YYYY-MM-DD format
+            // PostgreSQL date fields return as strings in YYYY-MM-DD format
+            let bookingDateStr = "";
+            if (booking.booking_date) {
+              // If it's already a string in YYYY-MM-DD format, use it directly
+              if (typeof booking.booking_date === "string") {
+                bookingDateStr = booking.booking_date.split("T")[0]; // Remove time part if present
+              } else {
+                // If it's a Date object, format it
+                const date = new Date(booking.booking_date);
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, "0");
+                const day = String(date.getDate()).padStart(2, "0");
+                bookingDateStr = `${year}-${month}-${day}`;
+              }
+            }
+
             return {
               id: booking.id,
               treatmentName: treatment?.name || "No Treatment",
               patientName: customer?.full_name || "Unknown Customer",
               startTime,
               endTime,
-              bookingDate: booking.booking_date || "",
+              bookingDate: bookingDateStr,
               room: room?.name || "No Room",
               roomId: booking.room_id || undefined,
               therapistId: therapistId || "", // Empty string for null therapist

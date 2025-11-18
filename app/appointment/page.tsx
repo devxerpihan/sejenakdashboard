@@ -105,9 +105,12 @@ export default function AppointmentPage() {
     // Filter by view mode
     if (currentView === "day") {
       // Show only appointments for the selected day (dateRange.start)
-      const selectedDateStr = dateRange.start.toISOString().split("T")[0];
+      // Format date without timezone conversion to avoid date shifts
+      const selectedDate = new Date(dateRange.start);
+      const selectedDateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}-${String(selectedDate.getDate()).padStart(2, "0")}`;
       filtered = filtered.filter((apt) => {
         if (!apt.bookingDate) return false;
+        // Ensure we're comparing just the date part (YYYY-MM-DD)
         const aptDateStr = apt.bookingDate.split("T")[0];
         return aptDateStr === selectedDateStr;
       });
