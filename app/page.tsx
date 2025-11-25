@@ -490,7 +490,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="py-12 px-6 bg-[#191919] dark:bg-[#0A0A0A] text-[#F0EEED]">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 mb-8">
             <div>
               <div className="flex items-center gap-3 mb-4">
                 <img
@@ -557,6 +557,27 @@ export default function Home() {
                 <li>
                   <Link href="/dashboard" className="hover:text-[#F0EEED]">
                     Contact
+                  </Link>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-bold mb-4">Legal</h4>
+              <ul className="space-y-2 text-sm text-[#C1A7A3]">
+                <li>
+                  <Link 
+                    href="/privacy" 
+                    className="hover:text-[#F0EEED] transition-colors cursor-pointer"
+                  >
+                    Privacy Policy
+                  </Link>
+                </li>
+                <li>
+                  <Link 
+                    href="/privacy#terms-conditions" 
+                    className="hover:text-[#F0EEED] transition-colors cursor-pointer"
+                  >
+                    Terms & Conditions
                   </Link>
                 </li>
               </ul>
