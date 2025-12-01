@@ -5,6 +5,16 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOi
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+// Server-side Supabase client with service role key (bypasses RLS)
+// Only use this in API routes or server components
+export const getSupabaseAdmin = () => {
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceRoleKey) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY is not set in environment variables");
+  }
+  return createClient(supabaseUrl, serviceRoleKey);
+};
+
 export interface Profile {
   id: string;
   clerk_id: string;
