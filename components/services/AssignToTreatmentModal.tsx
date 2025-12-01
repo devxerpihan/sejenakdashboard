@@ -22,6 +22,7 @@ export const AssignToTreatmentModal: React.FC<AssignToTreatmentModalProps> = ({
 }) => {
   const [treatments, setTreatments] = useState<Treatment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTreatments, setSelectedTreatments] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
@@ -36,12 +37,25 @@ export const AssignToTreatmentModal: React.FC<AssignToTreatmentModalProps> = ({
   const fetchTreatments = async () => {
     try {
       setLoading(true);
+      setError(null);
       const { data, error } = await supabase
         .from("treatments")
-        .select("id, name, category, image_url, duration, price, status")
+        .select("id, name, category, image_url, duration, price, is_active")
         .order("name", { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        // Log the full error structure for debugging
+        console.error("Supabase error:", error);
+        console.error("Error details:", {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+          statusCode: error.statusCode,
+          statusText: error.statusText,
+        });
+        throw error;
+      }
 
       const mappedTreatments: Treatment[] = (data || []).map((t: any) => ({
         id: t.id,
@@ -50,7 +64,7 @@ export const AssignToTreatmentModal: React.FC<AssignToTreatmentModalProps> = ({
         image: t.image_url || undefined,
         duration: t.duration || 0,
         price: t.price || 0,
-        status: t.status || "active",
+        status: t.is_active ? "active" : "inactive",
       }));
 
       setTreatments(mappedTreatments);
@@ -60,8 +74,47 @@ export const AssignToTreatmentModal: React.FC<AssignToTreatmentModalProps> = ({
         .filter((t) => t.category === categoryName)
         .map((t) => t.id);
       setSelectedTreatments(new Set(alreadyAssigned));
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error fetching treatments:", err);
+      
+      // Extract error message from various possible error structures
+      let errorMessage = "Failed to fetch treatments";
+      
+      if (err) {
+        // Try to stringify the error to see all properties
+        try {
+          const errorString = JSON.stringify(err, (key, value) => {
+            if (value instanceof Error) {
+              return {
+                name: value.name,
+                message: value.message,
+                stack: value.stack,
+              };
+            }
+            return value;
+          });
+          console.error("Error JSON:", errorString);
+        } catch (e) {
+          console.error("Could not stringify error:", e);
+        }
+        
+        // Extract readable error message from Supabase error structure
+        errorMessage = 
+          err.message || 
+          err.details || 
+          err.hint || 
+          (err.code === "42501" ? "Permission denied. Please check Row Level Security (RLS) policies." : null) ||
+          (err.code === "PGRST116" ? "No rows found" : null) ||
+          (err.code ? `Database error (${err.code})` : null) ||
+          (typeof err === "string" ? err : null) ||
+          (Object.keys(err).length === 0 ? "Unknown error: Empty error object received" : null) ||
+          "Failed to fetch treatments";
+      }
+      
+      setError(errorMessage);
+      if (onError) {
+        onError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -190,6 +243,18 @@ export const AssignToTreatmentModal: React.FC<AssignToTreatmentModalProps> = ({
           {loading ? (
             <div className="text-center py-8 text-[#706C6B] dark:text-[#C1A7A3]">
               Loading treatments...
+            </div>
+          ) : error ? (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+              <p className="text-sm text-red-600 dark:text-red-400 mb-2">
+                {error}
+              </p>
+              <button
+                onClick={fetchTreatments}
+                className="text-xs text-red-600 dark:text-red-400 hover:underline"
+              >
+                Try again
+              </button>
             </div>
           ) : filteredTreatments.length === 0 ? (
             <div className="text-center py-8 text-[#706C6B] dark:text-[#C1A7A3]">
