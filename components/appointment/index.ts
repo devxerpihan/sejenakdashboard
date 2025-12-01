@@ -8,4 +8,5 @@ export { ViewSwitcher } from "./ViewSwitcher";
 export { AppointmentHeader } from "./AppointmentHeader";
 export { AppointmentListView } from "./AppointmentListView";
 export { Footer } from "./Footer";
+export { CreateAppointmentModal } from "./CreateAppointmentModal";
 

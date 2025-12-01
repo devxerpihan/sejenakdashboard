@@ -1,236 +1,50 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { SejenakDashboardLayout } from "@/components/layout/SejenakDashboardLayout";
-import { Footer } from "@/components/layout";
-import {
-  Breadcrumbs,
-  PageHeader,
-  FiltersBar,
-  TreatmentTable,
-  Pagination,
-  EmptyState,
-} from "@/components/services";
-import { CreateTreatmentModal } from "@/components/services/CreateTreatmentModal";
-import { PlusIcon } from "@/components/icons";
-import { navItems } from "@/config/navigation";
-import { useTreatments } from "@/hooks/useTreatments";
-import { useTreatmentCategories } from "@/hooks/useTreatmentCategories";
+import { X } from "lucide-react";
 import { Treatment } from "@/types/treatment";
 import { TreatmentForm, TreatmentFormRef } from "@/components/services/TreatmentForm";
 import { supabase } from "@/lib/supabase";
 import { ToastContainer } from "@/components/ui/Toast";
 
-export default function TreatmentPage() {
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("darkMode");
-      return saved === "true";
-    }
-    return false;
-  });
+interface CreateTreatmentModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  categories: string[];
+  onSuccess?: () => void;
+  onError?: (message: string) => void;
+}
 
-  const [location, setLocation] = useState("Islamic Village");
-  const [dateRange, setDateRange] = useState({
-    start: new Date(2025, 0, 1),
-    end: new Date(2025, 8, 9),
-  });
-
-  const [selectedCategory, setSelectedCategory] = useState("All Category");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [viewMode, setViewMode] = useState<"list" | "edit">("list");
+export const CreateTreatmentModal: React.FC<CreateTreatmentModalProps> = ({
+  isOpen,
+  onClose,
+  categories,
+  onSuccess,
+  onError,
+}) => {
+  const [createStep, setCreateStep] = useState<1 | 2 | 3>(1);
   const [selectedTreatment, setSelectedTreatment] = useState<Treatment | null>(null);
   const treatmentFormRef = useRef<TreatmentFormRef>(null);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-
-  // Fetch treatments from database
-  const { treatments: allTreatments, loading, error, refetch } = useTreatments();
-  
-  // Fetch categories from database
-  const { categories: dbCategories } = useTreatmentCategories();
-
-  // Loading state for save/delete operations
   const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  
-  // Toast notifications
   const [toasts, setToasts] = useState<Array<{ id: string; message: string; type?: "success" | "error" | "warning" | "info" }>>([]);
-  
+
+  // Reset state when modal opens/closes
+  useEffect(() => {
+    if (isOpen) {
+      setCreateStep(1);
+      setSelectedTreatment(null);
+      setSaving(false);
+      setToasts([]);
+    }
+  }, [isOpen]);
+
   const showToast = (message: string, type: "success" | "error" | "warning" | "info" = "info") => {
     const id = `toast-${Date.now()}-${Math.random()}`;
     setToasts((prev) => [...prev, { id, message, type }]);
   };
-  
+
   const removeToast = (id: string) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
-  };
-
-  // Apply dark mode class to HTML element and save to localStorage
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("darkMode", "true");
-    } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("darkMode", "false");
-    }
-  }, [isDarkMode]);
-
-  // Build categories list with "All Category" option
-  const categories = ["All Category", ...dbCategories];
-  const treatmentCategories = dbCategories; // Categories for dropdown (excluding "All Category")
-
-  // Filter treatments
-  const filteredTreatments = allTreatments.filter((treatment) => {
-    const matchesCategory =
-      selectedCategory === "All Category" ||
-      treatment.category === selectedCategory;
-    const matchesSearch =
-      searchQuery === "" ||
-      treatment.name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
-
-  // Pagination
-  const itemsPerPage = 10;
-  const totalPages = Math.ceil(filteredTreatments.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedTreatments = filteredTreatments.slice(startIndex, endIndex);
-
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedCategory, searchQuery]);
-
-  const locations = ["Islamic Village", "Location 2", "Location 3"];
-
-  const handleCreateTreatment = () => {
-    setIsCreateModalOpen(true);
-  };
-
-  const handleTreatmentClick = async (treatment: Treatment) => {
-    try {
-      // Fetch full treatment details including description, image, etc.
-      const { data, error: fetchError } = await supabase
-        .from("treatments")
-        .select("id, name, category, duration, price, is_active, description, image_url")
-        .eq("id", treatment.id)
-        .single();
-
-      if (fetchError) throw fetchError;
-
-      // Fetch greetings from treatment_guides
-      const { data: guideData, error: guideError } = await supabase
-        .from("treatment_guides")
-        .select("id, welcome_message, completion_message")
-        .eq("treatment_id", treatment.id)
-        .maybeSingle();
-
-      // Parse greetings from messages
-      let welcomeCard: any = undefined;
-      let completionCard: any = undefined;
-
-      if (guideData?.welcome_message) {
-        const lines = guideData.welcome_message.split("\n").filter(Boolean);
-        welcomeCard = {
-          greetingText: lines[0] || "",
-          bodyText: lines[1] || "",
-          closingText: lines[2] || "",
-          signature: lines[3] || "",
-        };
-      }
-
-      if (guideData?.completion_message) {
-        const lines = guideData.completion_message.split("\n").filter(Boolean);
-        completionCard = {
-          greetingText: lines[0] || "",
-          bodyText: lines[1] || "",
-          closingText: lines[2] || "",
-          signature: lines[3] || "",
-        };
-      }
-
-      // Fetch treatment guide steps
-      let guideSteps: any[] = [];
-      if (guideData?.id) {
-        console.log("Fetching steps for guide ID:", guideData.id);
-        const { data: stepsData, error: stepsError } = await supabase
-          .from("treatment_steps")
-          .select("id, step_number, title, description, duration, instructions, tips, advantages, next_step_message, is_active")
-          .eq("treatment_guide_id", guideData.id)
-          .order("step_number", { ascending: true });
-
-        if (stepsError) {
-          console.error("Error fetching treatment steps:", stepsError);
-        } else {
-          console.log("Fetched steps data:", stepsData);
-          if (stepsData && stepsData.length > 0) {
-            guideSteps = stepsData.map((step: any) => ({
-              id: step.id,
-              stepNumber: step.step_number,
-              title: step.title,
-              description: step.description || "",
-              duration: step.duration || 1,
-              instructions: step.instructions || undefined,
-              tips: step.tips || undefined,
-              advantages: step.advantages || undefined,
-              nextStepMessage: step.next_step_message || undefined,
-              isActive: step.is_active !== undefined ? step.is_active : true,
-            }));
-            console.log("Mapped guide steps:", guideSteps);
-          }
-        }
-      } else {
-        console.log("No guide data found for treatment:", treatment.id);
-      }
-
-      // Fetch pricing variants from treatment_pricing_variants table
-      let pricingVariants: any[] = [];
-      const { data: variantsData, error: variantsError } = await supabase
-        .from("treatment_pricing_variants")
-        .select("id, name, weekday_price, weekend_price, holiday_price, weekday_enabled, weekend_enabled, holiday_enabled")
-        .eq("treatment_id", treatment.id)
-        .order("name", { ascending: true });
-
-      if (!variantsError && variantsData) {
-        pricingVariants = variantsData.map((variant: any) => ({
-          id: variant.id || `variant-${Date.now()}-${Math.random()}`,
-          name: variant.name,
-          weekday: variant.weekday_price || 0,
-          weekend: variant.weekend_price || 0,
-          holiday: variant.holiday_price || 0,
-          weekdayEnabled: variant.weekday_enabled !== undefined ? variant.weekday_enabled : true,
-          weekendEnabled: variant.weekend_enabled !== undefined ? variant.weekend_enabled : true,
-          holidayEnabled: variant.holiday_enabled !== undefined ? variant.holiday_enabled : true,
-        }));
-      }
-
-      // Map to Treatment type with all fields
-      const fullTreatment: Treatment = {
-        id: data.id,
-        name: data.name,
-        category: data.category || "Uncategorized",
-        duration: data.duration || 0,
-        price: data.price ? parseFloat(data.price) : 0,
-        status: data.is_active ? "active" : "inactive",
-        description: data.description || undefined,
-        image: data.image_url || undefined,
-        pricingVariants: pricingVariants.length > 0 ? pricingVariants : undefined,
-        welcomeCard: welcomeCard,
-        completionCard: completionCard,
-        guideSteps: guideSteps.length > 0 ? guideSteps : undefined,
-      };
-
-      setSelectedTreatment(fullTreatment);
-      setViewMode("edit");
-    } catch (err: any) {
-      console.error("Error fetching treatment details:", err);
-      // Fallback to the treatment from the list if fetch fails
-      setSelectedTreatment(treatment);
-      setViewMode("edit");
-    }
   };
 
   const handleSaveTreatment = async (treatment: Treatment) => {
@@ -249,22 +63,11 @@ export default function TreatmentPage() {
         image_url: treatment.image || null,
       };
 
-      // Store greetings data as JSON (we'll use a text field or JSONB if available)
-      // For now, storing as JSON string - can be migrated to JSONB column later
-      if (treatment.welcomeCard || treatment.completionCard) {
-        const greetingsData = {
-          welcomeCard: treatment.welcomeCard || null,
-          completionCard: treatment.completionCard || null,
-        };
-        // Store as JSON string in description or a custom field
-        // Note: This assumes you'll add a greetings_data JSONB column to treatments table
-        // For now, we'll store it separately in treatment_guides table
-      }
-
       let treatmentId = treatment.id;
       let isNewTreatment = false;
 
-      if (treatment.id && treatment.id.startsWith("treatment-")) {
+      // Check if this is a new treatment (has temporary ID or no ID)
+      if (!treatment.id || treatment.id.startsWith("treatment-")) {
         // New treatment - create
         isNewTreatment = true;
         const { data, error: insertError } = await supabase
@@ -275,7 +78,7 @@ export default function TreatmentPage() {
 
         if (insertError) throw insertError;
         treatmentId = data.id;
-        
+
         // Update selectedTreatment with the new ID so subsequent steps can update it
         setSelectedTreatment({
           ...treatment,
@@ -299,7 +102,7 @@ export default function TreatmentPage() {
             .single();
 
           let guideId: string | null = null;
-          
+
           if (existingGuide) {
             // Update existing guide
             await supabase
@@ -322,7 +125,7 @@ export default function TreatmentPage() {
               })
               .select()
               .single();
-            
+
             if (!guideError && newGuide) {
               guideId = newGuide.id;
             }
@@ -357,7 +160,7 @@ export default function TreatmentPage() {
               const { error: stepsError } = await supabase
                 .from("treatment_steps")
                 .insert(stepsToInsert);
-              
+
               if (stepsError) {
                 console.error("Error inserting treatment steps for new treatment:", stepsError);
                 throw stepsError;
@@ -365,7 +168,7 @@ export default function TreatmentPage() {
                 console.log("Successfully inserted", stepsToInsert.length, "steps for new treatment");
               }
             } else {
-              const invalidSteps = treatment.guideSteps?.filter((step) => 
+              const invalidSteps = treatment.guideSteps?.filter((step) =>
                 !step.title || !step.title.trim() || !step.description || !step.description.trim() || !step.duration || step.duration <= 0
               ) || [];
               if (treatment.guideSteps && treatment.guideSteps.length > 0) {
@@ -374,7 +177,7 @@ export default function TreatmentPage() {
                   "error"
                 );
                 setSaving(false);
-                return; // Don't redirect or continue saving
+                return; // Don't continue saving
               }
             }
           }
@@ -388,7 +191,7 @@ export default function TreatmentPage() {
             })
             .select()
             .single();
-          
+
           if (!guideError && newGuide) {
             console.log("All guideSteps before filtering (no greetings):", treatment.guideSteps);
             const stepsToInsert = treatment.guideSteps
@@ -417,7 +220,7 @@ export default function TreatmentPage() {
               const { error: stepsError } = await supabase
                 .from("treatment_steps")
                 .insert(stepsToInsert);
-              
+
               if (stepsError) {
                 console.error("Error inserting treatment steps (no greetings):", stepsError);
                 throw stepsError;
@@ -425,7 +228,7 @@ export default function TreatmentPage() {
                 console.log("Successfully inserted", stepsToInsert.length, "steps (no greetings)");
               }
             } else {
-              const invalidSteps = treatment.guideSteps?.filter((step) => 
+              const invalidSteps = treatment.guideSteps?.filter((step) =>
                 !step.title || !step.title.trim() || !step.description || !step.description.trim() || !step.duration || step.duration <= 0
               ) || [];
               if (treatment.guideSteps && treatment.guideSteps.length > 0) {
@@ -434,7 +237,7 @@ export default function TreatmentPage() {
                   "error"
                 );
                 setSaving(false);
-                return; // Don't redirect or continue saving
+                return; // Don't continue saving
               }
             }
           } else if (guideError) {
@@ -479,7 +282,7 @@ export default function TreatmentPage() {
             .eq("treatment_id", treatmentId);
         }
       } else {
-        // Existing treatment - update
+        // Existing treatment - update (shouldn't happen in create modal, but handle it)
         const { error: updateError } = await supabase
           .from("treatments")
           .update(treatmentData)
@@ -524,7 +327,7 @@ export default function TreatmentPage() {
               })
               .select()
               .single();
-            
+
             if (newGuideError) {
               console.error("Error creating treatment guide:", newGuideError);
             }
@@ -567,12 +370,12 @@ export default function TreatmentPage() {
             .delete()
             .eq("treatment_id", treatment.id);
         }
-        
+
         // Save treatment guide steps
         if (treatment.guideSteps && treatment.guideSteps.length > 0) {
           // First, get or create the treatment_guide_id
           let guideId: string | null = null;
-          
+
           const { data: guide, error: guideFetchError } = await supabase
             .from("treatment_guides")
             .select("id")
@@ -591,7 +394,7 @@ export default function TreatmentPage() {
               })
               .select()
               .single();
-            
+
             if (!createError && newGuide) {
               guideId = newGuide.id;
             } else {
@@ -639,7 +442,7 @@ export default function TreatmentPage() {
               const { error: insertError } = await supabase
                 .from("treatment_steps")
                 .insert(stepsToInsert);
-              
+
               if (insertError) {
                 console.error("Error inserting treatment steps:", insertError);
                 throw insertError;
@@ -647,7 +450,7 @@ export default function TreatmentPage() {
                 console.log("Successfully saved", stepsToInsert.length, "treatment steps");
               }
             } else {
-              const invalidSteps = treatment.guideSteps?.filter((step) => 
+              const invalidSteps = treatment.guideSteps?.filter((step) =>
                 !step.title || !step.title.trim() || !step.description || !step.description.trim() || !step.duration || step.duration <= 0
               ) || [];
               console.log("No valid steps to insert after filtering. Invalid steps:", invalidSteps);
@@ -657,7 +460,7 @@ export default function TreatmentPage() {
                   "error"
                 );
                 setSaving(false);
-                return; // Don't redirect or continue saving
+                return; // Don't continue saving
               }
             }
           } else {
@@ -666,263 +469,247 @@ export default function TreatmentPage() {
         }
       }
 
-      // Refetch treatments to get updated data
-      await refetch();
-
       // Show success message
       showToast("Treatment saved successfully!", "success");
 
-      // Edit mode - go back to list view
-      setTimeout(() => {
-        setViewMode("list");
-        setSelectedTreatment(null);
-      }, 1000);
+      // Move to next step or finish
+      if (createStep < 3) {
+        // Move to next step
+        setCreateStep((prev) => (prev + 1) as 1 | 2 | 3);
+      } else {
+        // On last step, close modal and call onSuccess
+        setTimeout(() => {
+          if (onSuccess) {
+            onSuccess();
+          }
+          onClose();
+        }, 1000);
+      }
     } catch (err: any) {
       console.error("Error saving treatment:", err);
-      showToast(`Failed to save treatment: ${err.message || "Unknown error"}`, "error");
-      // Don't redirect on error
+      const errorMessage = `Failed to save treatment: ${err.message || "Unknown error"}`;
+      showToast(errorMessage, "error");
+      if (onError) {
+        onError(errorMessage);
+      }
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDeleteTreatment = async () => {
-    if (!selectedTreatment || selectedTreatment.id.startsWith("treatment-")) {
-      // Can't delete a treatment that hasn't been saved yet
-      setViewMode("list");
-      setSelectedTreatment(null);
-      return;
+  const handleNextStep = () => {
+    if (createStep < 3) {
+      setCreateStep((prev) => (prev + 1) as 1 | 2 | 3);
     }
+  };
 
-    if (!confirm(`Are you sure you want to delete "${selectedTreatment.name}"? This action cannot be undone.`)) {
-      return;
+  const handlePreviousStep = () => {
+    if (createStep > 1) {
+      setCreateStep((prev) => (prev - 1) as 1 | 2 | 3);
     }
+  };
 
-    try {
-      setDeleting(true);
+  const handleSkipAndFinish = async () => {
+    // Save with current data and finish
+    if (treatmentFormRef.current) {
+      treatmentFormRef.current.save();
+    }
+  };
 
-      const { error: deleteError } = await supabase
-        .from("treatments")
-        .delete()
-        .eq("id", selectedTreatment.id);
-
-      if (deleteError) throw deleteError;
-
-      // Refetch treatments to get updated data
-      await refetch();
-
-      // Show success message
-      showToast("Treatment deleted successfully!", "success");
-
-      // Go back to list view after a short delay
-      setTimeout(() => {
-        setViewMode("list");
-        setSelectedTreatment(null);
-      }, 1000);
-    } catch (err: any) {
-      console.error("Error deleting treatment:", err);
-      showToast(`Failed to delete treatment: ${err.message || "Unknown error"}`, "error");
-    } finally {
-      setDeleting(false);
+  const handleSaveAndContinue = async () => {
+    // Save current step data
+    if (treatmentFormRef.current) {
+      treatmentFormRef.current.save();
+      // The save handler will automatically move to next step or finish
     }
   };
 
   const handleCancel = () => {
-    setViewMode("list");
-    setSelectedTreatment(null);
+    if (saving) return;
+    onClose();
   };
 
-  // Get breadcrumb items based on view mode
-  const getBreadcrumbItems = () => {
-    const handleTreatmentClick = (e: React.MouseEvent) => {
-      e.preventDefault();
-      if (viewMode !== "list") {
-        setViewMode("list");
-        setSelectedTreatment(null);
-      }
-    };
-
-    const base = [
-      { label: "Services", href: "/services" },
-      { 
-        label: "Treatment", 
-        onClick: handleTreatmentClick
-      }
-    ];
-    if (viewMode === "edit" && selectedTreatment) {
-      return [...base, { label: selectedTreatment.name }];
-    }
-    return base;
-  };
-
-
-  // Get page title based on view mode
-  const getPageTitle = () => {
-    if (viewMode === "edit" && selectedTreatment) {
-      return selectedTreatment.name;
-    }
-    return "Treatment";
-  };
+  if (!isOpen) return null;
 
   return (
-    <SejenakDashboardLayout
-      navItems={navItems}
-      headerTitle=""
-      location={location}
-      locations={locations}
-      onLocationChange={setLocation}
-      dateRange={dateRange}
-      onDateRangeChange={(direction) => {
-        console.log("Navigate", direction);
-      }}
-      isDarkMode={isDarkMode}
-      onDarkModeToggle={() => {
-        setIsDarkMode((prev) => !prev);
-      }}
-      customHeader={null}
-      footer={<Footer />}
-    >
-      <div>
-        {/* Breadcrumbs */}
-        <Breadcrumbs items={getBreadcrumbItems()} />
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        {/* Backdrop */}
+        <div
+          className="absolute inset-0 bg-black/20 backdrop-blur-[2px]"
+          onClick={handleCancel}
+        />
 
-        {viewMode === "list" ? (
-          <>
-            {/* Page Header */}
-            <PageHeader
-              title="Treatment"
-              actionButtons={[
-                {
-                  label: "Export / Import",
-                  onClick: () => console.log("Export / Import"),
-                  variant: "primary",
-                },
-                {
-                  label: "Create Treatment",
-                  onClick: handleCreateTreatment,
-                  variant: "outline",
-                  icon: <PlusIcon />,
-                },
-              ]}
-            />
+        {/* Modal Content */}
+        <div className="relative w-full max-w-4xl max-h-[90vh] bg-white dark:bg-[#191919] rounded-lg shadow-xl flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b border-zinc-200 dark:border-zinc-800 flex-shrink-0">
+            <h2 className="text-xl font-bold text-[#191919] dark:text-[#F0EEED]">
+              Create Treatment
+            </h2>
+            <button
+              onClick={handleCancel}
+              disabled={saving}
+              className="text-[#706C6B] dark:text-[#C1A7A3] hover:text-[#191919] dark:hover:text-[#F0EEED] transition-colors disabled:opacity-50"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
 
-            {/* Filters */}
-            <FiltersBar
-              categories={categories}
-              selectedCategory={selectedCategory}
-              onCategoryChange={setSelectedCategory}
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-              searchPlaceholder="Q Treatment"
-            />
-
-            {/* Loading State */}
-            {loading && (
-              <div className="bg-white dark:bg-[#191919] rounded-lg border border-zinc-200 dark:border-zinc-800 overflow-hidden">
-                <div className="flex items-center justify-center py-16 px-6 min-h-[400px]">
-                  <div className="text-sm text-[#706C6B] dark:text-[#C1A7A3]">
-                    Loading treatments...
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Error State */}
-            {error && !loading && (
-              <div className="bg-white dark:bg-[#191919] rounded-lg border border-zinc-200 dark:border-zinc-800 overflow-hidden">
-                <div className="flex flex-col items-center justify-center py-16 px-6 min-h-[400px]">
-                  <p className="text-sm text-red-600 dark:text-red-400 mb-4">
-                    Error: {error}
-                  </p>
-                  <button
-                    onClick={() => window.location.reload()}
-                    className="px-4 py-2 bg-[#C1A7A3] text-white rounded-lg hover:bg-[#A8928E] transition-colors"
+          {/* Progress Indicator */}
+          <div className="p-6 border-b border-zinc-200 dark:border-zinc-800 flex-shrink-0">
+            <div className="flex items-center w-full max-w-2xl mx-auto">
+              {/* Step 1: General Info */}
+              <div className="flex items-center flex-1">
+                <div className="flex flex-col items-center">
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
+                      createStep >= 1
+                        ? "bg-[#C1A7A3] text-white"
+                        : "bg-zinc-200 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400"
+                    }`}
                   >
-                    Retry
-                  </button>
+                    1
+                  </div>
+                  <span
+                    className={`mt-2 text-xs font-medium ${
+                      createStep >= 1
+                        ? "text-[#191919] dark:text-[#F0EEED]"
+                        : "text-zinc-500 dark:text-zinc-400"
+                    }`}
+                  >
+                    General Info
+                  </span>
+                </div>
+                <div
+                  className={`flex-1 h-0.5 mx-2 ${
+                    createStep >= 2
+                      ? "bg-[#C1A7A3]"
+                      : "bg-zinc-200 dark:bg-zinc-700"
+                  }`}
+                />
+              </div>
+
+              {/* Step 2: Greetings */}
+              <div className="flex items-center flex-1">
+                <div className="flex flex-col items-center">
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
+                      createStep >= 2
+                        ? "bg-[#C1A7A3] text-white"
+                        : "bg-zinc-200 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400"
+                    }`}
+                  >
+                    2
+                  </div>
+                  <span
+                    className={`mt-2 text-xs font-medium ${
+                      createStep >= 2
+                        ? "text-[#191919] dark:text-[#F0EEED]"
+                        : "text-zinc-500 dark:text-zinc-400"
+                    }`}
+                  >
+                    Greetings
+                  </span>
+                </div>
+                <div
+                  className={`flex-1 h-0.5 mx-2 ${
+                    createStep >= 3
+                      ? "bg-[#C1A7A3]"
+                      : "bg-zinc-200 dark:bg-zinc-700"
+                  }`}
+                />
+              </div>
+
+              {/* Step 3: Treatment Guide */}
+              <div className="flex items-center">
+                <div className="flex flex-col items-center">
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
+                      createStep >= 3
+                        ? "bg-[#C1A7A3] text-white"
+                        : "bg-zinc-200 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400"
+                    }`}
+                  >
+                    3
+                  </div>
+                  <span
+                    className={`mt-2 text-xs font-medium ${
+                      createStep >= 3
+                        ? "text-[#191919] dark:text-[#F0EEED]"
+                        : "text-zinc-500 dark:text-zinc-400"
+                    }`}
+                  >
+                    Treatment Guide
+                  </span>
                 </div>
               </div>
-            )}
+            </div>
+          </div>
 
-            {/* Treatment Table */}
-            {!loading && !error && (
-              <>
-                {paginatedTreatments.length > 0 ? (
-                  <>
-                    <TreatmentTable
-                      treatments={paginatedTreatments}
-                      onTreatmentClick={handleTreatmentClick}
-                    />
-                    <Pagination
-                      currentPage={currentPage}
-                      totalPages={totalPages}
-                      totalItems={filteredTreatments.length}
-                      itemsPerPage={itemsPerPage}
-                      onPageChange={setCurrentPage}
-                    />
-                  </>
-                ) : (
-                  <EmptyState message="No treatments found. Try adjusting your filters." />
-                )}
-              </>
-            )}
-          </>
-        ) : (
-          <>
-            {/* Page Header for Edit */}
-            <PageHeader
-              title={getPageTitle()}
-              actionButtons={[
-                {
-                  label: deleting ? "Deleting..." : "Delete Treatment",
-                  onClick: () => {
-                    if (!saving && !deleting) {
-                      handleDeleteTreatment();
-                    }
-                  },
-                  variant: "secondary" as const,
-                },
-                {
-                  label: saving ? "Saving..." : "Save Changes",
-                  onClick: () => {
-                    if (!saving && !deleting) {
-                      treatmentFormRef.current?.save();
-                    }
-                  },
-                  variant: "primary" as const,
-                },
-              ]}
-            />
-
-            {/* Treatment Form */}
+          {/* Step Content - Scrollable */}
+          <div className="flex-1 overflow-y-auto p-6">
             <TreatmentForm
               ref={treatmentFormRef}
               treatment={selectedTreatment || undefined}
               onSave={handleSaveTreatment}
-              onDelete={handleDeleteTreatment}
+              onDelete={undefined}
               onCancel={handleCancel}
-              categories={treatmentCategories}
+              categories={categories}
+              stepMode={true}
+              currentStep={createStep}
             />
-          </>
-        )}
+          </div>
+
+          {/* Step Navigation Buttons */}
+          <div className="flex items-center justify-between p-6 border-t border-zinc-200 dark:border-zinc-800 flex-shrink-0">
+            <div className="flex items-center gap-3">
+              {createStep > 1 && (
+                <button
+                  onClick={handlePreviousStep}
+                  disabled={saving}
+                  className="px-6 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm font-medium text-[#191919] dark:text-[#F0EEED] hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50"
+                >
+                  Back
+                </button>
+              )}
+              {createStep === 3 && (
+                <button
+                  onClick={handleSkipAndFinish}
+                  disabled={saving}
+                  className="px-6 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm font-medium text-[#191919] dark:text-[#F0EEED] hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50"
+                >
+                  Skip & Finish
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleCancel}
+                disabled={saving}
+                className="px-6 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm font-medium text-[#191919] dark:text-[#F0EEED] hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveAndContinue}
+                disabled={saving}
+                className="px-6 py-2 bg-[#C1A7A3] text-white rounded-lg hover:bg-[#A88F8B] transition-colors disabled:opacity-50 text-sm font-medium"
+              >
+                {saving
+                  ? "Saving..."
+                  : createStep === 3
+                  ? "Save & Finish"
+                  : "Save & Continue"}
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
-      
+
       {/* Toast Notifications */}
       <ToastContainer toasts={toasts} onRemove={removeToast} />
-
-      {/* Create Treatment Modal */}
-      <CreateTreatmentModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        categories={treatmentCategories}
-        onSuccess={() => {
-          refetch();
-        }}
-        onError={(message) => {
-          showToast(message, "error");
-        }}
-      />
-    </SejenakDashboardLayout>
+    </>
   );
-}
+};
 

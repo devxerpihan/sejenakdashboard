@@ -7,6 +7,7 @@ import {
   AppointmentSchedule,
   AppointmentHeader,
   AppointmentListView,
+  CreateAppointmentModal,
 } from "@/components/appointment";
 import { Appointment, Therapist, ViewMode } from "@/types/appointment";
 import { getNavItems } from "@/config/navigation";
@@ -28,6 +29,7 @@ export default function AppointmentPage() {
 
   const [currentView, setCurrentView] = useState<ViewMode>("week");
   const [viewMode, setViewMode] = useState<"list" | "grid">("grid");
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   
   // Helper functions for date ranges
   const getCurrentDay = () => {
@@ -308,8 +310,7 @@ export default function AppointmentPage() {
           viewMode={viewMode}
           onViewModeChange={setViewMode}
           onNewAppointment={() => {
-            // Handle new appointment creation
-            console.log("New Appointment");
+            setIsCreateModalOpen(true);
           }}
         />
       }
@@ -344,6 +345,16 @@ export default function AppointmentPage() {
           />
         )}
       </div>
+      
+      <CreateAppointmentModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        branchId={selectedBranchId}
+        onSuccess={() => {
+          // Refresh appointments or show success message
+          window.location.reload(); // Simple refresh for now
+        }}
+      />
     </SejenakDashboardLayout>
   );
 }

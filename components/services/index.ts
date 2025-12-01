@@ -33,6 +33,7 @@ export { CreateBundleModal } from "./CreateBundleModal";
 export { BundleTable } from "./BundleTable";
 export { CreatePromoModal } from "./CreatePromoModal";
 export { CreateDiscountModal } from "./CreateDiscountModal";
+export { CreateTreatmentModal } from "./CreateTreatmentModal";
 export { EligibilitySelector } from "./EligibilitySelector";
 export type { EligibilityData, EligibilityType } from "./EligibilitySelector";
 

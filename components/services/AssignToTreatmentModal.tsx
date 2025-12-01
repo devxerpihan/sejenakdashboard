@@ -50,9 +50,7 @@ export const AssignToTreatmentModal: React.FC<AssignToTreatmentModalProps> = ({
           message: error.message,
           code: error.code,
           details: error.details,
-          hint: error.hint,
-          statusCode: error.statusCode,
-          statusText: error.statusText,
+          hint: error.hint
         });
         throw error;
       }
