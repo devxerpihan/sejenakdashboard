@@ -30,6 +30,8 @@ export function useNotifications() {
     }
 
     async function fetchNotifications() {
+      if (!profile) return;
+      
       try {
         setLoading(true);
         setError(null);
@@ -74,9 +76,9 @@ export function useNotifications() {
           event: "*",
           schema: "public",
           table: "notifications",
-          filter: profile.id
+          filter: profile?.id
             ? `recipient_id=eq.${profile.id}`
-            : profile.role
+            : profile?.role
             ? `recipient_role=eq.${profile.role}`
             : undefined,
         },
