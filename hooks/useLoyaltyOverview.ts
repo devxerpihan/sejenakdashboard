@@ -84,34 +84,64 @@ export function useLoyaltyOverview(
       if (pointsHistoryError) throw pointsHistoryError;
 
       // Fetch redemptions
-      let redemptionsQuery = supabase
-        .from("reward_redemptions")
-        .select("id, reward_id, redeemed_at, created_at");
+      let redemptions: any[] = [];
+      try {
+        let redemptionsQuery = supabase
+          .from("reward_redemptions")
+          .select("id, reward_id, redeemed_at");
 
-      if (startDateStr) {
-        redemptionsQuery = redemptionsQuery.gte("redeemed_at", startDateStr);
-      }
-      if (endDateStr) {
-        redemptionsQuery = redemptionsQuery.lte("redeemed_at", endDateStr);
-      }
+        if (startDateStr) {
+          redemptionsQuery = redemptionsQuery.gte("redeemed_at", startDateStr);
+        }
+        if (endDateStr) {
+          redemptionsQuery = redemptionsQuery.lte("redeemed_at", endDateStr);
+        }
 
-      const { data: redemptions, error: redemptionsError } = await redemptionsQuery;
-      if (redemptionsError && redemptionsError.code !== "PGRST116") {
-        console.warn("Error fetching redemptions:", redemptionsError);
+        const { data: redemptionsData, error: redemptionsError } = await redemptionsQuery;
+        
+        // Handle errors gracefully - table might not exist or have RLS issues
+        if (redemptionsError) {
+          // PGRST116 = not found, 42P01 = relation does not exist
+          if (redemptionsError.code === "PGRST116" || redemptionsError.code === "42P01" || redemptionsError.message?.includes("does not exist")) {
+            console.warn("reward_redemptions table not found or not accessible, using empty array");
+            redemptions = [];
+          } else {
+            console.warn("Error fetching redemptions:", redemptionsError);
+            redemptions = [];
+          }
+        } else {
+          redemptions = redemptionsData || [];
+        }
+      } catch (redemptionErr: any) {
+        // Catch any unexpected errors and continue with empty array
+        console.warn("Error fetching redemptions:", redemptionErr);
+        redemptions = [];
       }
 
       // Fetch reward details for redemption breakdown
-      const rewardIds = [...new Set((redemptions || []).map((r: any) => r.reward_id).filter(Boolean))];
+      const rewardIds = [...new Set(redemptions.map((r: any) => r.reward_id).filter(Boolean))];
       let rewards: any[] = [];
       if (rewardIds.length > 0) {
-        const { data: rewardsData } = await supabase
-          .from("rewards")
-          .select("id, name")
-          .in("id", rewardIds);
-        rewards = rewardsData || [];
+        try {
+          const { data: rewardsData, error: rewardsError } = await supabase
+            .from("rewards")
+            .select("id, reward")
+            .in("id", rewardIds);
+          
+          if (rewardsError) {
+            console.warn("Error fetching rewards:", rewardsError);
+            rewards = [];
+          } else {
+            rewards = rewardsData || [];
+          }
+        } catch (rewardsErr: any) {
+          console.warn("Error fetching rewards:", rewardsErr);
+          rewards = [];
+        }
       }
 
-      const rewardMap = new Map(rewards.map((r: any) => [r.id, r.name]));
+      // Map rewards: use 'reward' column (not 'name') as per schema
+      const rewardMap = new Map(rewards.map((r: any) => [r.id, r.reward || "Unknown Reward"]));
 
       // Calculate stats
       const totalMembers = memberPoints?.length || 0;
@@ -128,7 +158,7 @@ export function useLoyaltyOverview(
       const avgPointsPerMember = totalMembers > 0 ? Math.round(totalPoints / totalMembers) : 0;
 
       // Rewards redeemed
-      const rewardsRedeemed = redemptions?.length || 0;
+      const rewardsRedeemed = redemptions.length || 0;
 
       // Tier distribution (new system: Grace, Signature, Elite)
       const tierDistribution = {
@@ -222,7 +252,7 @@ export function useLoyaltyOverview(
 
       // Redeem rewards breakdown
       const redeemRewardsMap: { [key: string]: number } = {};
-      (redemptions || []).forEach((r: any) => {
+      redemptions.forEach((r: any) => {
         const rewardName = rewardMap.get(r.reward_id) || "Unknown Reward";
         redeemRewardsMap[rewardName] = (redeemRewardsMap[rewardName] || 0) + 1;
       });
