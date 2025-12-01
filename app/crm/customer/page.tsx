@@ -108,6 +108,26 @@ export default function CustomerPage() {
     router.push(`/crm/customer/${customer.id}`);
   };
 
+  const handleBlockCustomer = async (customerId: string, block: boolean) => {
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ is_active: !block }) // block = true means is_active = false
+        .eq("id", customerId);
+
+      if (error) throw error;
+
+      // Refresh customer list
+      await refetch();
+      
+      // Show success message
+      alert(block ? "Customer has been blocked successfully." : "Customer has been unblocked successfully.");
+    } catch (err: any) {
+      console.error("Error blocking/unblocking customer:", err);
+      alert("Failed to update customer status: " + (err.message || "Unknown error"));
+    }
+  };
+
   const handleCustomerAction = async (action: "view" | "edit" | "block", customer: Customer) => {
     if (action === "view") {
       // Same action as clicking the row - navigate to detail page
@@ -158,9 +178,15 @@ export default function CustomerPage() {
         setLoadingCustomerDetails(false);
       }
     } else if (action === "block") {
-      // TODO: Implement block customer functionality
-      console.log("Block customer:", customer.id);
-      // Could show a confirmation modal here
+      // Show confirmation before blocking
+      const isBlocked = customer.status === "blocked";
+      const confirmMessage = isBlocked
+        ? `Are you sure you want to unblock ${customer.name}?`
+        : `Are you sure you want to block ${customer.name}? This will prevent them from making appointments.`;
+      
+      if (window.confirm(confirmMessage)) {
+        handleBlockCustomer(customer.id, !isBlocked);
+      }
     }
   };
 

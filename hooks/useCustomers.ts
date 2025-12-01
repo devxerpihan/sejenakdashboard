@@ -22,7 +22,7 @@ export function useCustomers(): {
       // Fetch customer profiles
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
-        .select("id, full_name, email, phone, avatar_url, date_of_birth, address, created_at")
+        .select("id, full_name, email, phone, avatar_url, date_of_birth, address, created_at, is_active")
         .eq("role", "customer")
         .order("full_name", { ascending: true });
 
@@ -79,14 +79,17 @@ export function useCustomers(): {
           else if (tier === "platinum" || tier === "vip") memberLevel = "VIP";
         }
 
-        // Determine status based on booking behavior
+        // Determine status based on booking behavior and blocked status
         let status: "active" | "at-risk" | "flagged" | "blocked" = "active";
-        if (stats.cancelledCount >= 8 || stats.noShowCount >= 3) {
+        
+        // Check if customer is blocked (is_active = false)
+        if (profile.is_active === false) {
+          status = "blocked";
+        } else if (stats.cancelledCount >= 8 || stats.noShowCount >= 3) {
           status = "flagged";
         } else if (stats.cancelledCount >= 3 || stats.noShowCount >= 2) {
           status = "at-risk";
         }
-        // Note: "blocked" status would need to be stored in the database
 
         return {
           id: profile.id,
