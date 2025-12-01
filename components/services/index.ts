@@ -7,6 +7,12 @@ export { PromoTable } from "./PromoTable";
 export { DiscountTable } from "./DiscountTable";
 export { CustomerTable } from "./CustomerTable";
 export { MembershipTable } from "./MembershipTable";
+export { EditMembershipModal } from "../loyalty/EditMembershipModal";
+export { MembershipBenefits } from "../loyalty/MembershipBenefits";
+export { PointRulesTable } from "../loyalty/PointRulesTable";
+export { EditPointRulesModal } from "../loyalty/EditPointRulesModal";
+export { EditRewardModal } from "../loyalty/EditRewardModal";
+export { ResetLoyaltyModal } from "../loyalty/ResetLoyaltyModal";
 export { RewardTable } from "./RewardTable";
 export { StaffTable } from "./StaffTable";
 export { StatusBadge } from "./StatusBadge";
@@ -36,4 +42,5 @@ export { CreateDiscountModal } from "./CreateDiscountModal";
 export { CreateTreatmentModal } from "./CreateTreatmentModal";
 export { EligibilitySelector } from "./EligibilitySelector";
 export type { EligibilityData, EligibilityType } from "./EligibilitySelector";
+export { FeedbackTable } from "./FeedbackTable";
 

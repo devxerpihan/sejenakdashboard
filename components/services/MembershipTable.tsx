@@ -5,7 +5,7 @@ import { Membership } from "@/types/membership";
 
 interface MembershipTableProps {
   memberships: Membership[];
-  onActionClick?: (membershipId: string) => void;
+  onActionClick?: (membership: Membership) => void;
 }
 
 export const MembershipTable: React.FC<MembershipTableProps> = ({
@@ -72,7 +72,7 @@ export const MembershipTable: React.FC<MembershipTableProps> = ({
                 <td className="px-6 py-4 whitespace-nowrap">
                   <button
                     onClick={() =>
-                      onActionClick && onActionClick(membership.id)
+                      onActionClick && onActionClick(membership)
                     }
                     className="text-[#706C6B] dark:text-[#C1A7A3] hover:text-[#191919] dark:hover:text-[#F0EEED] transition-colors"
                     aria-label="Actions"

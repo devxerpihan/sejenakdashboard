@@ -70,13 +70,19 @@ export function useCustomers(): {
         const memberPoint = memberPoints?.find((mp) => mp.user_id === profile.id);
         const stats = customerStats[profile.id] || { appointmentCount: 0, cancelledCount: 0, noShowCount: 0 };
         
-        // Determine member level from tier
-        let memberLevel: "Bliss" | "Silver" | "VIP" | "Gold" = "Bliss";
+        // Determine member level from tier (new system: Grace, Signature, Elite)
+        let memberLevel: "Grace" | "Signature" | "Elite" = "Grace";
         if (memberPoint?.tier) {
           const tier = memberPoint.tier.toLowerCase();
-          if (tier === "silver") memberLevel = "Silver";
-          else if (tier === "gold") memberLevel = "Gold";
-          else if (tier === "platinum" || tier === "vip") memberLevel = "VIP";
+          // Map old tier names to new system for backward compatibility
+          if (tier === "signature" || tier === "silver") {
+            memberLevel = "Signature";
+          } else if (tier === "elite" || tier === "vip" || tier === "gold" || tier === "platinum") {
+            memberLevel = "Elite";
+          } else {
+            // Default to Grace (includes "grace", "bliss", and any other)
+            memberLevel = "Grace";
+          }
         }
 
         // Determine status based on booking behavior and blocked status

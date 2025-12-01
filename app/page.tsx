@@ -133,7 +133,7 @@ export default function Home() {
     },
     {
       name: "Maria Garcia",
-      role: "VIP Member",
+      role: "Elite Member",
       content: "The best beauty lounge in Islamic Village! Professional staff and amazing results every time.",
       rating: 5,
       image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",

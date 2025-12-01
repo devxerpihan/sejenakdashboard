@@ -320,7 +320,13 @@ export default function CustomerDetailPage() {
         city: "-", // Would need to be stored in profile or fetched separately
         registeredDate: formatDate(profile.created_at),
         avatar: profile.avatar_url || undefined,
-        memberLevel: memberPoints?.tier || "Bliss",
+        memberLevel: (() => {
+          const tier = memberPoints?.tier?.toLowerCase();
+          // Map to new tier system
+          if (tier === "signature" || tier === "silver") return "Signature";
+          if (tier === "elite" || tier === "vip" || tier === "gold" || tier === "platinum") return "Elite";
+          return "Grace"; // Default to Grace (includes "grace", "bliss", and any other)
+        })(),
         totalVisits,
         totalPoints: memberPoints?.total_points || 0,
         lifetimePoints: memberPoints?.lifetime_points || 0,

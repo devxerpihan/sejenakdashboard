@@ -5,7 +5,7 @@ export interface Customer {
   name: string;
   email: string;
   phone?: string;
-  memberLevel: "Bliss" | "Silver" | "VIP" | "Gold";
+  memberLevel: "Grace" | "Signature" | "Elite";
   appointmentCount: number;
   status: "active" | "at-risk" | "flagged" | "blocked";
   avatar?: string;

@@ -10,7 +10,7 @@ export interface Promo {
     start: string; // Date string in DD/MM/YY format
     end: string; // Date string in DD/MM/YY format
   };
-  targetting: string; // e.g., "All", "Bliss", "VIP"
+  targetting: string; // e.g., "All", "Grace", "Signature", "Elite"
   status: "active" | "expired";
 }
 

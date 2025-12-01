@@ -97,7 +97,7 @@ export default function CustomerPage() {
   const paginatedCustomers = filteredCustomers.slice(startIndex, endIndex);
 
   const locations = ["Islamic Village", "Location 2", "Location 3"];
-  const memberLevels = ["All", "Bliss", "Silver", "VIP", "Gold"];
+  const memberLevels = ["All", "Grace", "Signature", "Elite"];
 
   const handleExportImport = () => {
     console.log("Export / Import");

@@ -2,15 +2,18 @@
 
 import React from "react";
 import { Reward } from "@/types/reward";
+import { StatusBadge } from "./StatusBadge";
 
 interface RewardTableProps {
   rewards: Reward[];
   onActionClick?: (rewardId: string) => void;
+  onRowClick?: (reward: Reward) => void;
 }
 
 export const RewardTable: React.FC<RewardTableProps> = ({
   rewards,
   onActionClick,
+  onRowClick,
 }) => {
   return (
     <div className="bg-white dark:bg-[#191919] rounded-lg border border-zinc-200 dark:border-zinc-800 overflow-hidden">
@@ -19,22 +22,25 @@ export const RewardTable: React.FC<RewardTableProps> = ({
           <thead className="bg-[#F0EEED] dark:bg-[#3D3B3A] border-b border-zinc-200 dark:border-zinc-800">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-[#706C6B] dark:text-[#C1A7A3] uppercase tracking-wider">
-                Reward
+                Image
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-[#706C6B] dark:text-[#C1A7A3] uppercase tracking-wider">
-                Method
+                Name
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-[#706C6B] dark:text-[#C1A7A3] uppercase tracking-wider">
-                Required
+                Category
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-[#706C6B] dark:text-[#C1A7A3] uppercase tracking-wider">
-                Claim Type
+                Total Points
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-[#706C6B] dark:text-[#C1A7A3] uppercase tracking-wider">
-                Auto Reward
+                Quota
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-[#706C6B] dark:text-[#C1A7A3] uppercase tracking-wider">
-                Action
+                Usage Count
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-[#706C6B] dark:text-[#C1A7A3] uppercase tracking-wider">
+                Status
               </th>
             </tr>
           </thead>
@@ -42,8 +48,34 @@ export const RewardTable: React.FC<RewardTableProps> = ({
             {rewards.map((reward) => (
               <tr
                 key={reward.id}
-                className="hover:bg-[#F0EEED] dark:hover:bg-[#3D3B3A] transition-colors"
+                onClick={() => onRowClick && onRowClick(reward)}
+                className="hover:bg-[#F0EEED] dark:hover:bg-[#3D3B3A] transition-colors cursor-pointer"
               >
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {reward.image ? (
+                    <img
+                      src={reward.image}
+                      alt={reward.reward}
+                      className="w-20 h-14 object-cover rounded-md"
+                    />
+                  ) : (
+                    <div className="w-20 h-14 bg-zinc-200 dark:bg-zinc-700 rounded-md flex items-center justify-center">
+                      <svg
+                        className="w-6 h-6 text-zinc-400 dark:text-zinc-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                    </div>
+                  )}
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-[#191919] dark:text-[#F0EEED]">
                     {reward.reward}
@@ -51,46 +83,28 @@ export const RewardTable: React.FC<RewardTableProps> = ({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-[#706C6B] dark:text-[#C1A7A3]">
-                    {reward.method}
+                    {reward.category || "N/A"}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-[#706C6B] dark:text-[#C1A7A3]">
-                    {reward.required} {reward.method === "Point" ? "points" : "stamps"}
+                    {reward.totalPoints ?? reward.required}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-[#706C6B] dark:text-[#C1A7A3]">
-                    {reward.claimType}
+                    {reward.quota ?? "Unlimited"}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-[#706C6B] dark:text-[#C1A7A3]">
-                    {reward.autoReward}
+                    {reward.usageCount ?? 0}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <button
-                    onClick={() =>
-                      onActionClick && onActionClick(reward.id)
-                    }
-                    className="text-[#706C6B] dark:text-[#C1A7A3] hover:text-[#191919] dark:hover:text-[#F0EEED] transition-colors"
-                    aria-label="Actions"
-                  >
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
-                      />
-                    </svg>
-                  </button>
+                  <StatusBadge
+                    status={reward.status === "Active" ? "active" : reward.status === "Expired" ? "inactive" : "active"}
+                  />
                 </td>
               </tr>
             ))}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { SejenakDashboardLayout } from "@/components/layout/SejenakDashboardLayout";
 import { Footer } from "@/components/layout";
 import {
@@ -10,13 +10,16 @@ import {
   LineChart,
   WordCloud,
   ImprovementSuggestion,
+  FeedbackTable,
+  Pagination,
 } from "@/components/services";
 import { DateRangePicker } from "@/components/ui/DateRangePicker";
 import { SejenakStatCard } from "@/components/dashboard/SejenakStatCard";
 import { ChartCard } from "@/components/dashboard/ChartCard";
 import { DonutChart } from "@/components/dashboard/DonutChart";
 import { navItems } from "@/config/navigation";
-import { UsersIcon } from "@/components/icons";
+import { UsersIcon, SearchIcon } from "@/components/icons";
+import { useReviews } from "@/hooks/useReviews";
 
 export default function InLoungeFeedbackPage() {
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -34,6 +37,15 @@ export default function InLoungeFeedbackPage() {
   });
 
   const [activeTab, setActiveTab] = useState("overview");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Fetch reviews from database
+  const { reviews, loading: reviewsLoading, error: reviewsError, refetch } = useReviews(
+    dateRange.start,
+    dateRange.end,
+    null // branchId - could be added later
+  );
 
   // Apply dark mode class to HTML element and save to localStorage
   useEffect(() => {
@@ -53,18 +65,78 @@ export default function InLoungeFeedbackPage() {
     console.log("Navigate", direction);
   };
 
-  // Summary cards data
-  const summaryCards = [
+  // Calculate stats from reviews
+  const stats = useMemo(() => {
+    if (!reviews || reviews.length === 0) {
+      return {
+        therapistScore: 0,
+        cleanliness: 0,
+        comfort: 0,
+        wouldRecommend: 0,
+        totalReviews: 0,
+      };
+    }
+
+    const totalReviews = reviews.length;
+    const avgRating = reviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews;
+    
+    const cleanlinessRatings = reviews.filter(r => r.cleanliness_rating !== null).map(r => r.cleanliness_rating!);
+    const avgCleanliness = cleanlinessRatings.length > 0
+      ? (cleanlinessRatings.reduce((sum, r) => sum + r, 0) / cleanlinessRatings.length) * 20 // Convert to percentage
+      : 0;
+
+    const ambianceRatings = reviews.filter(r => r.ambiance_rating !== null).map(r => r.ambiance_rating!);
+    const avgAmbiance = ambianceRatings.length > 0
+      ? (ambianceRatings.reduce((sum, r) => sum + r, 0) / ambianceRatings.length) * 20 // Convert to percentage
+      : 0;
+
+    // Would recommend = percentage of 4-5 star ratings
+    const recommendCount = reviews.filter(r => r.rating >= 4).length;
+    const wouldRecommend = (recommendCount / totalReviews) * 100;
+
+    return {
+      therapistScore: Math.round(avgRating * 100) / 100,
+      cleanliness: Math.round(avgCleanliness),
+      comfort: Math.round(avgAmbiance),
+      wouldRecommend: Math.round(wouldRecommend),
+      totalReviews,
+    };
+  }, [reviews]);
+
+  // Filter reviews by search query
+  const filteredReviews = useMemo(() => {
+    if (!searchQuery) return reviews;
+    
+    const query = searchQuery.toLowerCase();
+    return reviews.filter((review) => {
+      return (
+        review.user_name?.toLowerCase().includes(query) ||
+        review.treatment_name?.toLowerCase().includes(query) ||
+        review.therapist_name?.toLowerCase().includes(query) ||
+        review.comment?.toLowerCase().includes(query)
+      );
+    });
+  }, [reviews, searchQuery]);
+
+  // Pagination
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(filteredReviews.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedReviews = filteredReviews.slice(startIndex, endIndex);
+
+  // Summary cards data (calculated from reviews)
+  const summaryCards = useMemo(() => [
     {
       title: "Therapist Score",
-      value: "4.95",
+      value: stats.therapistScore.toFixed(2),
       icon: <UsersIcon />,
-      trend: [4.5, 4.6, 4.7, 4.8, 4.9, 4.95],
+      trend: [stats.therapistScore], // Simplified - could calculate monthly trends
       trendType: "bar" as const,
     },
     {
       title: "Cleanliness",
-      value: "92%",
+      value: `${stats.cleanliness}%`,
       icon: (
         <svg
           className="w-5 h-5"
@@ -80,12 +152,12 @@ export default function InLoungeFeedbackPage() {
           />
         </svg>
       ),
-      trend: [85, 87, 89, 90, 91, 92],
+      trend: [stats.cleanliness],
       trendType: "area" as const,
     },
     {
       title: "Comfort",
-      value: "95%",
+      value: `${stats.comfort}%`,
       icon: (
         <svg
           className="w-5 h-5"
@@ -101,12 +173,12 @@ export default function InLoungeFeedbackPage() {
           />
         </svg>
       ),
-      trend: [90, 91, 92, 93, 94, 95],
+      trend: [stats.comfort],
       trendType: "bar" as const,
     },
     {
       title: "Would Recommend",
-      value: "100%",
+      value: `${stats.wouldRecommend}%`,
       icon: (
         <svg
           className="w-5 h-5"
@@ -122,72 +194,178 @@ export default function InLoungeFeedbackPage() {
           />
         </svg>
       ),
-      trend: [95, 96, 97, 98, 99, 100],
+      trend: [stats.wouldRecommend],
       trendType: "area" as const,
     },
-  ];
+  ], [stats]);
 
-  // Therapist Score line chart data
-  const therapistScoreData = [
-    { label: "Jan", value: 4.5 },
-    { label: "Feb", value: 4.6 },
-    { label: "Mar", value: 4.7 },
-    { label: "Apr", value: 4.8 },
-    { label: "May", value: 4.9 },
-    { label: "Jun", value: 4.85 },
-  ];
+  // Therapist Score line chart data (monthly trends)
+  const therapistScoreData = useMemo(() => {
+    if (!reviews || reviews.length === 0) {
+      return [
+        { label: "Jan", value: 0 },
+        { label: "Feb", value: 0 },
+        { label: "Mar", value: 0 },
+        { label: "Apr", value: 0 },
+        { label: "May", value: 0 },
+        { label: "Jun", value: 0 },
+      ];
+    }
 
-  // Post Treatment Feel donut chart data
-  const postTreatmentFeelData = [
-    { label: "Relax", value: 214, color: "#C1A7A3" },
-    { label: "Fresh", value: 150, color: "#DCCAB7" },
-    { label: "Energized", value: 121, color: "#706C6B" },
-  ];
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthlyRatings: { [key: number]: number[] } = {};
 
-  // Word cloud data
-  const wordCloudData = [
-    { text: "Treatment", weight: 10 },
-    { text: "Ruangan", weight: 8 },
-    { text: "Nyaman", weight: 9 },
-    { text: "Overall", weight: 7 },
-    { text: "Kesini", weight: 6 },
-    { text: "Bagus", weight: 5 },
-    { text: "Service", weight: 8 },
-    { text: "Staff", weight: 7 },
-    { text: "Lokasi", weight: 6 },
-    { text: "Harga", weight: 5 },
-    { text: "Fasilitas", weight: 6 },
-    { text: "Atmosphere", weight: 5 },
-  ];
+    reviews.forEach((review) => {
+      const date = new Date(review.created_at);
+      const month = date.getMonth();
+      if (!monthlyRatings[month]) {
+        monthlyRatings[month] = [];
+      }
+      monthlyRatings[month].push(review.rating);
+    });
 
-  // Improvement suggestions
-  const improvementSuggestions = [
-    {
-      id: "1",
-      text: "Waktu tunggu saat di receptionist (check in) terlalu lama",
-      mentionCount: 20,
-    },
-    {
-      id: "2",
-      text: "Ruangan terlalu dingin, perlu penyesuaian suhu AC",
-      mentionCount: 15,
-    },
-    {
-      id: "3",
-      text: "Parkir terbatas, perlu penambahan area parkir",
-      mentionCount: 12,
-    },
-    {
-      id: "4",
-      text: "WiFi kurang stabil di beberapa area",
-      mentionCount: 8,
-    },
-  ];
+    // Calculate average for each month
+    const monthlyAverages = monthNames.map((_, index) => {
+      const ratings = monthlyRatings[index] || [];
+      const avg = ratings.length > 0
+        ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length
+        : 0;
+      return {
+        label: monthNames[index],
+        value: Math.round(avg * 100) / 100,
+      };
+    });
 
-  const tabs = [
+    // Return last 6 months
+    return monthlyAverages.slice(-6);
+  }, [reviews]);
+
+  // Post Treatment Feel donut chart data (analyze comments for keywords)
+  const postTreatmentFeelData = useMemo(() => {
+    if (!reviews || reviews.length === 0) {
+      return [
+        { label: "Relax", value: 0, color: "#C1A7A3" },
+        { label: "Fresh", value: 0, color: "#DCCAB7" },
+        { label: "Energized", value: 0, color: "#706C6B" },
+      ];
+    }
+
+    const relaxKeywords = ["relax", "relaxed", "relaxing", "calm", "peaceful", "serene", "tranquil", "tenang", "santai"];
+    const freshKeywords = ["fresh", "refreshed", "clean", "cleanse", "renewed", "segar", "bersih"];
+    const energizedKeywords = ["energized", "energy", "energetic", "vitality", "revitalized", "boost", "berenergi", "bersemangat"];
+
+    let relaxCount = 0;
+    let freshCount = 0;
+    let energizedCount = 0;
+
+    reviews.forEach((review) => {
+      if (!review.comment) return;
+      const comment = review.comment.toLowerCase();
+      
+      const hasRelax = relaxKeywords.some(keyword => comment.includes(keyword));
+      const hasFresh = freshKeywords.some(keyword => comment.includes(keyword));
+      const hasEnergized = energizedKeywords.some(keyword => comment.includes(keyword));
+
+      if (hasRelax) relaxCount++;
+      if (hasFresh) freshCount++;
+      if (hasEnergized) energizedCount++;
+    });
+
+    return [
+      { label: "Relax", value: relaxCount, color: "#C1A7A3" },
+      { label: "Fresh", value: freshCount, color: "#DCCAB7" },
+      { label: "Energized", value: energizedCount, color: "#706C6B" },
+    ];
+  }, [reviews]);
+
+  // Word cloud data (extract common words from comments)
+  const wordCloudData = useMemo(() => {
+    if (!reviews || reviews.length === 0) {
+      return [];
+    }
+
+    const wordCount: { [key: string]: number } = {};
+    const stopWords = new Set([
+      "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by",
+      "is", "are", "was", "were", "be", "been", "being", "have", "has", "had", "do", "does", "did",
+      "will", "would", "should", "could", "may", "might", "must", "can", "this", "that", "these", "those",
+      "i", "you", "he", "she", "it", "we", "they", "me", "him", "her", "us", "them",
+      "yang", "dan", "atau", "dengan", "untuk", "dari", "pada", "ke", "di", "adalah", "akan", "sudah"
+    ]);
+
+    reviews.forEach((review) => {
+      if (!review.comment) return;
+      const words = review.comment
+        .toLowerCase()
+        .replace(/[^\w\s]/g, " ")
+        .split(/\s+/)
+        .filter(word => word.length > 3 && !stopWords.has(word));
+
+      words.forEach((word) => {
+        wordCount[word] = (wordCount[word] || 0) + 1;
+      });
+    });
+
+    // Get top 12 words
+    const sortedWords = Object.entries(wordCount)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 12)
+      .map(([text, count]) => ({
+        text: text.charAt(0).toUpperCase() + text.slice(1),
+        weight: count,
+      }));
+
+    return sortedWords;
+  }, [reviews]);
+
+  // Improvement suggestions (analyze negative comments)
+  const improvementSuggestions = useMemo(() => {
+    if (!reviews || reviews.length === 0) {
+      return [];
+    }
+
+    // Get reviews with rating <= 3 or negative keywords
+    const negativeKeywords = [
+      "lambat", "lama", "terlalu", "kurang", "tidak", "belum", "perlu", "harus",
+      "slow", "long", "too", "not", "need", "should", "wait", "cold", "hot", "dingin", "panas"
+    ];
+
+    const suggestions: { [key: string]: number } = {};
+
+    reviews.forEach((review) => {
+      if (review.rating <= 3 && review.comment) {
+        const comment = review.comment.toLowerCase();
+        
+        // Extract sentences with negative keywords
+        const sentences = comment.split(/[.!?]/).filter(s => s.trim().length > 10);
+        
+        sentences.forEach((sentence) => {
+          const hasNegative = negativeKeywords.some(keyword => sentence.includes(keyword));
+          if (hasNegative) {
+            const cleaned = sentence.trim();
+            if (cleaned.length > 20 && cleaned.length < 200) {
+              suggestions[cleaned] = (suggestions[cleaned] || 0) + 1;
+            }
+          }
+        });
+      }
+    });
+
+    // Get top 4 suggestions
+    return Object.entries(suggestions)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 4)
+      .map(([text, mentionCount], index) => ({
+        id: String(index + 1),
+        text: text.charAt(0).toUpperCase() + text.slice(1),
+        mentionCount,
+      }));
+  }, [reviews]);
+
+  const tabs = useMemo(() => [
     { id: "overview", label: "Overview" },
-    { id: "responses", label: "Responses", count: 500 },
-  ];
+    { id: "responses", label: "Responses", count: filteredReviews.length },
+  ], [filteredReviews.length]);
 
   return (
     <SejenakDashboardLayout
@@ -258,8 +436,8 @@ export default function InLoungeFeedbackPage() {
               {/* Post Treatment Feel Donut Chart */}
               <DonutChart
                 data={postTreatmentFeelData}
-                totalLabel="Total Customer"
-                totalValue={569}
+                totalLabel="Total Reviews"
+                totalValue={postTreatmentFeelData.reduce((sum, item) => sum + item.value, 0)}
                 title="Post Treatment Feel"
               />
             </div>
@@ -276,10 +454,71 @@ export default function InLoungeFeedbackPage() {
         )}
 
         {activeTab === "responses" && (
-          <div className="bg-white dark:bg-[#191919] rounded-lg border border-zinc-200 dark:border-zinc-800 p-6">
-            <p className="text-[#706C6B] dark:text-[#C1A7A3]">
-              Responses tab content will be implemented here
-            </p>
+          <div>
+            {/* Search Bar */}
+            <div className="relative flex-1 max-w-md mb-6">
+              <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#706C6B] dark:text-[#C1A7A3]">
+                <SearchIcon />
+              </div>
+              <input
+                type="text"
+                placeholder="Search by customer, treatment, therapist, or comment"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1); // Reset to first page on search
+                }}
+                className="w-full pl-10 pr-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-[#191919] text-[#191919] dark:text-[#F0EEED] placeholder-[#706C6B] focus:outline-none focus:ring-2 focus:ring-[#C1A7A3]"
+              />
+            </div>
+
+            {/* Loading State */}
+            {reviewsLoading && (
+              <div className="bg-white dark:bg-[#191919] rounded-lg border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+                <div className="flex items-center justify-center py-16 px-6 min-h-[400px]">
+                  <div className="text-sm text-[#706C6B] dark:text-[#C1A7A3]">
+                    Loading reviews...
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Error State */}
+            {reviewsError && !reviewsLoading && (
+              <div className="bg-white dark:bg-[#191919] rounded-lg border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+                <div className="flex flex-col items-center justify-center py-16 px-6 min-h-[400px]">
+                  <p className="text-sm text-red-600 dark:text-red-400 mb-4">
+                    Error: {reviewsError}
+                  </p>
+                  <button
+                    onClick={() => refetch()}
+                    className="px-4 py-2 bg-[#C1A7A3] text-white rounded-lg hover:bg-[#A8928E] transition-colors"
+                  >
+                    Retry
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Reviews Table */}
+            {!reviewsLoading && !reviewsError && (
+              <>
+                <FeedbackTable reviews={paginatedReviews} />
+                
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="mt-6">
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      totalItems={filteredReviews.length}
+                      itemsPerPage={itemsPerPage}
+                      onPageChange={setCurrentPage}
+                    />
+                  </div>
+                )}
+              </>
+            )}
           </div>
         )}
       </div>
