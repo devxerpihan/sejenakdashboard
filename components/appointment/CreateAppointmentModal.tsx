@@ -518,7 +518,7 @@ export const CreateAppointmentModal: React.FC<CreateAppointmentModalProps> = ({
   }));
 
   // Generate time slots (8:00 to 20:00, every 30 minutes)
-  const timeSlots = [];
+  const timeSlots: { value: string; label: string }[] = [];
   for (let hour = 8; hour < 20; hour++) {
     for (let minute = 0; minute < 60; minute += 30) {
       const timeStr = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;

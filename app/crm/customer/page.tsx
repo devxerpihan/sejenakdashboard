@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { SejenakDashboardLayout } from "@/components/layout/SejenakDashboardLayout";
 import { Footer } from "@/components/layout";
 import {
@@ -14,6 +15,9 @@ import { SearchIcon } from "@/components/icons";
 import { Dropdown } from "@/components/ui/Dropdown";
 import { navItems } from "@/config/navigation";
 import { Customer, CustomerStatus } from "@/types/customer";
+import { useCustomers } from "@/hooks/useCustomers";
+import { EditProfileModal } from "@/components/crm/EditProfileModal";
+import { supabase } from "@/lib/supabase";
 
 export default function CustomerPage() {
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -34,6 +38,14 @@ export default function CustomerPage() {
   const [selectedStatus, setSelectedStatus] = useState<CustomerStatus>("all");
   const [selectedMemberLevel, setSelectedMemberLevel] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [editingCustomerDetails, setEditingCustomerDetails] = useState<any>(null);
+  const [loadingCustomerDetails, setLoadingCustomerDetails] = useState(false);
+  const router = useRouter();
+
+  // Fetch customers from database
+  const { customers: allCustomers, loading, error, refetch } = useCustomers();
 
   // Apply dark mode class to HTML element and save to localStorage
   useEffect(() => {
@@ -46,126 +58,6 @@ export default function CustomerPage() {
     }
   }, [isDarkMode]);
 
-  // Sample customers data based on the image
-  const allCustomers: Customer[] = [
-    {
-      id: "1",
-      name: "Grace Wallen",
-      email: "gracewallen@gmail.com",
-      phone: "+1234567890",
-      memberLevel: "Bliss",
-      appointmentCount: 20,
-      status: "active",
-    },
-    {
-      id: "2",
-      name: "Grace Wallen",
-      email: "gracewallen@gmail.com",
-      phone: "+1234567890",
-      memberLevel: "Silver",
-      appointmentCount: 0,
-      status: "flagged",
-    },
-    {
-      id: "3",
-      name: "Patricia",
-      email: "patricia@gmail.com",
-      phone: "+1234567891",
-      memberLevel: "Bliss",
-      appointmentCount: 0,
-      status: "blocked",
-    },
-    {
-      id: "4",
-      name: "Grace Wallen",
-      email: "gracewallen@gmail.com",
-      phone: "+1234567890",
-      memberLevel: "VIP",
-      appointmentCount: 0,
-      status: "at-risk",
-    },
-    {
-      id: "5",
-      name: "Margot Kim",
-      email: "margotkim@gmail.com",
-      phone: "+1234567892",
-      memberLevel: "VIP",
-      appointmentCount: 70,
-      status: "active",
-    },
-    {
-      id: "6",
-      name: "Sarah Johnson",
-      email: "sarah.johnson@gmail.com",
-      phone: "+1234567893",
-      memberLevel: "Gold",
-      appointmentCount: 45,
-      status: "active",
-    },
-    {
-      id: "7",
-      name: "Emily Davis",
-      email: "emily.davis@gmail.com",
-      phone: "+1234567894",
-      memberLevel: "Bliss",
-      appointmentCount: 12,
-      status: "at-risk",
-    },
-    {
-      id: "8",
-      name: "Michael Brown",
-      email: "michael.brown@gmail.com",
-      phone: "+1234567895",
-      memberLevel: "Silver",
-      appointmentCount: 5,
-      status: "flagged",
-    },
-    {
-      id: "9",
-      name: "Jessica Wilson",
-      email: "jessica.wilson@gmail.com",
-      phone: "+1234567896",
-      memberLevel: "VIP",
-      appointmentCount: 30,
-      status: "active",
-    },
-    {
-      id: "10",
-      name: "David Martinez",
-      email: "david.martinez@gmail.com",
-      phone: "+1234567897",
-      memberLevel: "Bliss",
-      appointmentCount: 0,
-      status: "blocked",
-    },
-    // Add more customers to reach 200 total
-    // Using deterministic values based on index to avoid hydration errors
-    ...Array.from({ length: 190 }, (_, i) => {
-      const index = i + 11;
-      // Deterministic selection based on index
-      const memberLevels: ("Bliss" | "Silver" | "VIP" | "Gold")[] = [
-        "Bliss",
-        "Silver",
-        "VIP",
-        "Gold",
-      ];
-      const statuses: ("active" | "at-risk" | "flagged" | "blocked")[] = [
-        "active",
-        "at-risk",
-        "flagged",
-        "blocked",
-      ];
-      return {
-        id: `${index}`,
-        name: `Customer ${index}`,
-        email: `customer${index}@gmail.com`,
-        phone: `+1234567${String(index).padStart(3, "0")}`,
-        memberLevel: memberLevels[index % 4],
-        appointmentCount: (index * 7) % 100, // Deterministic calculation
-        status: statuses[index % 4],
-      };
-    }),
-  ];
 
   // Calculate status counts
   const statusCounts = useMemo(() => {
@@ -212,9 +104,64 @@ export default function CustomerPage() {
     // TODO: Implement export/import functionality
   };
 
-  const handleCustomerAction = (customerId: string) => {
-    console.log("Customer action:", customerId);
-    // TODO: Implement customer action menu
+  const handleCustomerClick = (customer: Customer) => {
+    router.push(`/crm/customer/${customer.id}`);
+  };
+
+  const handleCustomerAction = async (action: "view" | "edit" | "block", customer: Customer) => {
+    if (action === "view") {
+      // Same action as clicking the row - navigate to detail page
+      router.push(`/crm/customer/${customer.id}`);
+    } else if (action === "edit") {
+      // Fetch customer details and open edit modal directly on this page
+      setLoadingCustomerDetails(true);
+      try {
+        const { data: profile, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", customer.id)
+          .single();
+
+        if (error) throw error;
+
+        // Format dates
+        const formatDate = (dateStr: string | null) => {
+          if (!dateStr) return "";
+          const date = new Date(dateStr);
+          const day = String(date.getDate()).padStart(2, "0");
+          const month = String(date.getMonth() + 1).padStart(2, "0");
+          const year = date.getFullYear();
+          return `${day}/${month}/${year}`;
+        };
+
+        // Format phone with +62 prefix
+        const formattedPhone = profile.phone ? (profile.phone.startsWith("+62") ? profile.phone : `+62${profile.phone}`) : "";
+
+        setEditingCustomerDetails({
+          id: profile.id,
+          name: profile.full_name || customer.name,
+          email: profile.email || customer.email,
+          phone: formattedPhone,
+          birthDate: formatDate(profile.date_of_birth),
+          address: profile.address || "",
+          city: "-", // Would need to be stored in profile
+          registeredDate: formatDate(profile.created_at),
+          memberStatus: "Active",
+          role: profile.role || "customer",
+        });
+        setEditingCustomer(customer);
+        setIsEditModalOpen(true);
+      } catch (err: any) {
+        console.error("Error fetching customer details:", err);
+        alert("Failed to load customer details for editing");
+      } finally {
+        setLoadingCustomerDetails(false);
+      }
+    } else if (action === "block") {
+      // TODO: Implement block customer functionality
+      console.log("Block customer:", customer.id);
+      // Could show a confirmation modal here
+    }
   };
 
   return (
@@ -294,11 +241,44 @@ export default function CustomerPage() {
           </div>
         </div>
 
+        {/* Loading State */}
+        {loading && (
+          <div className="bg-white dark:bg-[#191919] rounded-lg border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+            <div className="flex items-center justify-center py-16 px-6 min-h-[400px]">
+              <div className="text-sm text-[#706C6B] dark:text-[#C1A7A3]">
+                Loading customers...
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <div className="bg-white dark:bg-[#191919] rounded-lg border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+            <div className="flex flex-col items-center justify-center py-16 px-6 min-h-[400px]">
+              <p className="text-sm text-red-600 dark:text-red-400 mb-4">
+                Error: {error}
+              </p>
+              <button
+                onClick={() => refetch()}
+                className="px-4 py-2 bg-[#C1A7A3] text-white rounded-lg hover:bg-[#A8928E] transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Customer Table */}
-        <CustomerTable
-          customers={paginatedCustomers}
-          onActionClick={handleCustomerAction}
-        />
+        {!loading && !error && (
+          <>
+            <CustomerTable
+              customers={paginatedCustomers}
+              onCustomerClick={handleCustomerClick}
+              onActionClick={handleCustomerAction}
+            />
+          </>
+        )}
 
         {/* Pagination */}
         <Pagination
@@ -309,6 +289,26 @@ export default function CustomerPage() {
           onPageChange={setCurrentPage}
         />
       </div>
+
+      {/* Edit Profile Modal */}
+      {editingCustomer && editingCustomerDetails && (
+        <EditProfileModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setEditingCustomer(null);
+            setEditingCustomerDetails(null);
+          }}
+          customer={editingCustomerDetails}
+          onSave={() => {
+            // Refresh customer list
+            setIsEditModalOpen(false);
+            setEditingCustomer(null);
+            setEditingCustomerDetails(null);
+            window.location.reload();
+          }}
+        />
+      )}
     </SejenakDashboardLayout>
   );
 }
