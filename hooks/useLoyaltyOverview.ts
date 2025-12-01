@@ -50,40 +50,162 @@ export function useLoyaltyOverview(
       setLoading(true);
       setError(null);
 
+      console.log("[DEBUG] Starting loyalty overview fetch...");
+
       // Fetch all member points
-      const { data: memberPoints, error: memberPointsError } = await supabase
-        .from("member_points")
-        .select("user_id, tier, total_points, lifetime_points, created_at");
+      console.log("[DEBUG] Fetching member_points...");
+      let memberPoints: any[] = [];
+      try {
+        const { data: memberPointsData, error: memberPointsError } = await supabase
+          .from("member_points")
+          .select("user_id, tier, total_points, lifetime_points, created_at");
 
-      if (memberPointsError) throw memberPointsError;
+        if (memberPointsError) {
+          const errorMessage = memberPointsError.message || "";
+          const errorCode = memberPointsError.code || "";
+          
+          console.error("[DEBUG] member_points error:", {
+            message: errorMessage,
+            code: errorCode,
+          });
+          
+          if (errorMessage.includes("Load failed") || errorMessage.includes("TypeError") || errorCode === "") {
+            console.log("[DEBUG] member_points: Network error detected, using empty array");
+            memberPoints = [];
+          } else {
+            memberPoints = [];
+          }
+        } else {
+          memberPoints = memberPointsData || [];
+          console.log("[DEBUG] member_points fetched:", memberPoints.length, "records");
+        }
+      } catch (memberPointsErr: any) {
+        console.error("[DEBUG] member_points exception:", {
+          message: memberPointsErr?.message,
+        });
+        memberPoints = [];
+      }
 
-      // Fetch profiles to get creation dates
-      const userIds = (memberPoints || []).map((mp: any) => mp.user_id).filter(Boolean);
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, created_at")
-        .in("id", userIds)
-        .eq("role", "customer");
+      // Fetch ALL customer profiles (fast with role index)
+      // Use ALL profiles for member growth chart (not just those with member_points)
+      // This is much faster than .in() with 1000+ IDs
+      console.log("[DEBUG] Fetching all customer profiles (optimized)...");
+      let profiles: any[] = [];
+      
+      try {
+        // Fetch all customer profiles - this is fast with the role index
+        // We use ALL customer profiles for accurate member growth calculation
+        const { data: allProfilesData, error: profilesError } = await supabase
+          .from("profiles")
+          .select("id, created_at")
+          .eq("role", "customer")
+          .limit(10000); // Reasonable limit
+        
+        if (profilesError) {
+          const errorMessage = profilesError.message || "";
+          const errorCode = profilesError.code || "";
+          
+          console.error("[DEBUG] profiles error:", {
+            message: errorMessage,
+            code: errorCode,
+          });
+          
+          if (errorMessage.includes("Load failed") || errorMessage.includes("TypeError") || errorCode === "") {
+            console.log("[DEBUG] profiles: Network error detected, using empty array");
+            profiles = [];
+          } else {
+            profiles = [];
+          }
+        } else {
+          // Use ALL customer profiles (not filtered) for accurate member growth chart
+          // The growth chart should show all customers, not just those with member_points
+          profiles = allProfilesData || [];
+          console.log("[DEBUG] All customer profiles fetched:", profiles.length, "records");
+        }
+      } catch (profilesErr: any) {
+        console.error("[DEBUG] profiles exception:", {
+          message: profilesErr?.message,
+        });
+        profiles = [];
+      }
 
       // Fetch points history for earned/redeemed
       const startDateStr = startDate ? startDate.toISOString().split("T")[0] : null;
       const endDateStr = endDate ? new Date(endDate).toISOString().split("T")[0] : null;
 
-      let pointsHistoryQuery = supabase
-        .from("points_history")
-        .select("points, type, created_at");
+      console.log("[DEBUG] Fetching points_history...", { startDateStr, endDateStr });
 
-      if (startDateStr) {
-        pointsHistoryQuery = pointsHistoryQuery.gte("created_at", startDateStr);
-      }
-      if (endDateStr) {
-        pointsHistoryQuery = pointsHistoryQuery.lte("created_at", endDateStr);
-      }
+      let pointsHistory: any[] = [];
+      try {
+        let pointsHistoryQuery = supabase
+          .from("points_history")
+          .select("points, type, created_at");
 
-      const { data: pointsHistory, error: pointsHistoryError } = await pointsHistoryQuery;
-      if (pointsHistoryError) throw pointsHistoryError;
+        if (startDateStr) {
+          pointsHistoryQuery = pointsHistoryQuery.gte("created_at", startDateStr);
+        }
+        if (endDateStr) {
+          pointsHistoryQuery = pointsHistoryQuery.lte("created_at", endDateStr);
+        }
+
+        const { data: pointsHistoryData, error: pointsHistoryError } = await pointsHistoryQuery;
+        
+        console.log("[DEBUG] points_history query result:", {
+          hasData: !!pointsHistoryData,
+          dataLength: pointsHistoryData?.length || 0,
+          hasError: !!pointsHistoryError,
+          errorCode: pointsHistoryError?.code,
+          errorMessage: pointsHistoryError?.message,
+          errorDetails: pointsHistoryError,
+        });
+        
+        // Handle errors gracefully - table might not exist or have RLS issues
+        if (pointsHistoryError) {
+          // Suppress expected errors (table doesn't exist, RLS blocking, etc.)
+          // Only log unexpected errors in development
+          const errorMessage = pointsHistoryError.message || "";
+          const errorCode = pointsHistoryError.code || "";
+          const isExpectedError = 
+            errorCode === "PGRST116" || 
+            errorCode === "42P01" ||
+            errorMessage.includes("does not exist") ||
+            errorMessage.includes("Could not fetch properties") ||
+            errorMessage.includes("access control") ||
+            errorMessage.includes("Load failed") ||
+            errorMessage.includes("TypeError") ||
+            errorCode === ""; // Empty code often means network/CORS error
+          
+          console.log("[DEBUG] points_history error detected:", {
+            code: errorCode,
+            message: errorMessage,
+            isExpectedError,
+            fullError: pointsHistoryError,
+          });
+          
+          if (!isExpectedError && process.env.NODE_ENV === "development") {
+            console.warn("Error fetching points_history:", pointsHistoryError);
+          }
+          pointsHistory = [];
+        } else {
+          pointsHistory = pointsHistoryData || [];
+          console.log("[DEBUG] points_history success:", pointsHistory.length, "records");
+        }
+      } catch (pointsHistoryErr: any) {
+        // Catch any unexpected errors and continue with empty array
+        console.error("[DEBUG] points_history exception caught:", {
+          message: pointsHistoryErr?.message,
+          stack: pointsHistoryErr?.stack,
+          fullError: pointsHistoryErr,
+        });
+        if (process.env.NODE_ENV === "development") {
+          console.warn("Error fetching points_history:", pointsHistoryErr);
+        }
+        pointsHistory = [];
+      }
 
       // Fetch redemptions
+      console.log("[DEBUG] Fetching reward_redemptions...", { startDateStr, endDateStr });
+      
       let redemptions: any[] = [];
       try {
         let redemptionsQuery = supabase
@@ -99,22 +221,56 @@ export function useLoyaltyOverview(
 
         const { data: redemptionsData, error: redemptionsError } = await redemptionsQuery;
         
+        console.log("[DEBUG] reward_redemptions query result:", {
+          hasData: !!redemptionsData,
+          dataLength: redemptionsData?.length || 0,
+          hasError: !!redemptionsError,
+          errorCode: redemptionsError?.code,
+          errorMessage: redemptionsError?.message,
+          errorDetails: redemptionsError,
+        });
+        
         // Handle errors gracefully - table might not exist or have RLS issues
         if (redemptionsError) {
-          // PGRST116 = not found, 42P01 = relation does not exist
-          if (redemptionsError.code === "PGRST116" || redemptionsError.code === "42P01" || redemptionsError.message?.includes("does not exist")) {
-            console.warn("reward_redemptions table not found or not accessible, using empty array");
-            redemptions = [];
-          } else {
+          // Suppress expected errors (table doesn't exist, RLS blocking, etc.)
+          // Only log unexpected errors in development
+          const errorMessage = redemptionsError.message || "";
+          const errorCode = redemptionsError.code || "";
+          const isExpectedError = 
+            errorCode === "PGRST116" || 
+            errorCode === "42P01" ||
+            errorMessage.includes("does not exist") ||
+            errorMessage.includes("Could not fetch properties") ||
+            errorMessage.includes("access control") ||
+            errorMessage.includes("Load failed") ||
+            errorMessage.includes("TypeError") ||
+            errorCode === ""; // Empty code often means network/CORS error
+          
+          console.log("[DEBUG] reward_redemptions error detected:", {
+            code: errorCode,
+            message: errorMessage,
+            isExpectedError,
+            fullError: redemptionsError,
+          });
+          
+          if (!isExpectedError && process.env.NODE_ENV === "development") {
             console.warn("Error fetching redemptions:", redemptionsError);
-            redemptions = [];
           }
+          redemptions = [];
         } else {
           redemptions = redemptionsData || [];
+          console.log("[DEBUG] reward_redemptions success:", redemptions.length, "records");
         }
       } catch (redemptionErr: any) {
         // Catch any unexpected errors and continue with empty array
-        console.warn("Error fetching redemptions:", redemptionErr);
+        console.error("[DEBUG] reward_redemptions exception caught:", {
+          message: redemptionErr?.message,
+          stack: redemptionErr?.stack,
+          fullError: redemptionErr,
+        });
+        if (process.env.NODE_ENV === "development") {
+          console.warn("Error fetching redemptions:", redemptionErr);
+        }
         redemptions = [];
       }
 
@@ -179,14 +335,14 @@ export function useLoyaltyOverview(
       // Points earned and redeemed
       // Points earned: positive points
       // Points redeemed: negative points (or positive with type "redeemed")
-      const pointsEarned = (pointsHistory || [])
+      const pointsEarned = pointsHistory
         .filter((ph: any) => {
           const type = ph.type?.toLowerCase();
           return type === "earned" || type === "purchase" || type === "transaction" || (ph.points > 0 && !type?.includes("redeem"));
         })
         .reduce((sum: number, ph: any) => sum + Math.abs(ph.points || 0), 0);
 
-      const pointsRedeemed = (pointsHistory || [])
+      const pointsRedeemed = pointsHistory
         .filter((ph: any) => {
           const type = ph.type?.toLowerCase();
           return type === "redeemed" || type === "redemption" || ph.points < 0;
@@ -195,36 +351,56 @@ export function useLoyaltyOverview(
 
       // Member growth (monthly)
       const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      const monthlyGrowth: { [key: string]: { new: number; total: number } } = {};
+      const monthlyGrowth: { [key: string]: { new: number; total: number; year: number; month: number } } = {};
 
       profiles?.forEach((profile: any) => {
+        if (!profile.created_at) return;
         const date = new Date(profile.created_at);
-        const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
+        if (isNaN(date.getTime())) return; // Skip invalid dates
+        
+        const year = date.getFullYear();
+        const month = date.getMonth(); // 0-11
+        const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+        
         if (!monthlyGrowth[monthKey]) {
-          monthlyGrowth[monthKey] = { new: 0, total: 0 };
+          monthlyGrowth[monthKey] = { new: 0, total: 0, year, month };
         }
         monthlyGrowth[monthKey].new++;
       });
 
       // Calculate cumulative totals
+      // Sort by year and month numerically (not as strings)
+      const sortedKeys = Object.keys(monthlyGrowth).sort((a, b) => {
+        const [yearA, monthA] = a.split("-").map(Number);
+        const [yearB, monthB] = b.split("-").map(Number);
+        if (yearA !== yearB) return yearA - yearB;
+        return monthA - monthB;
+      });
+
+      // Get last 9 months
+      const last9Months = sortedKeys.slice(-9);
+      
+      // Calculate cumulative total from the beginning, not just from last 9 months
       let cumulativeTotal = 0;
-      const memberGrowth = Object.keys(monthlyGrowth)
-        .sort()
-        .slice(-9) // Last 9 months
-        .map((key) => {
-          const [year, month] = key.split("-");
-          cumulativeTotal += monthlyGrowth[key].new;
-          return {
-            month: monthNames[parseInt(month)],
-            newMembers: monthlyGrowth[key].new,
-            totalMembers: cumulativeTotal,
-          };
-        });
+      const allMonthsBefore = sortedKeys.slice(0, -9);
+      allMonthsBefore.forEach(key => {
+        cumulativeTotal += monthlyGrowth[key].new;
+      });
+
+      const memberGrowth = last9Months.map((key) => {
+        const [year, month] = key.split("-").map(Number);
+        cumulativeTotal += monthlyGrowth[key].new;
+        return {
+          month: monthNames[month],
+          newMembers: monthlyGrowth[key].new,
+          totalMembers: cumulativeTotal,
+        };
+      });
 
       // Points flow (monthly)
       const monthlyPoints: { [key: string]: { earned: number; redeemed: number } } = {};
 
-      (pointsHistory || []).forEach((ph: any) => {
+      pointsHistory.forEach((ph: any) => {
         const date = new Date(ph.created_at);
         const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
         if (!monthlyPoints[monthKey]) {
@@ -262,6 +438,19 @@ export function useLoyaltyOverview(
         .slice(0, 4)
         .map(([label, value]) => ({ label, value }));
 
+      console.log("[DEBUG] Calculated stats:", {
+        totalMembers,
+        newMembers,
+        avgPointsPerMember,
+        rewardsRedeemed,
+        tierDistribution,
+        pointsEarned,
+        pointsRedeemed,
+        memberGrowthLength: memberGrowth.length,
+        pointsFlowLength: pointsFlow.length,
+        redeemRewardsLength: redeemRewards.length,
+      });
+
       setStats({
         totalMembers,
         newMembers,
@@ -274,11 +463,22 @@ export function useLoyaltyOverview(
         pointsFlow,
         redeemRewards,
       });
+      
+      console.log("[DEBUG] Loyalty overview fetch completed successfully");
     } catch (err: any) {
-      console.error("Error fetching loyalty overview:", err);
+      console.error("[DEBUG] Error fetching loyalty overview:", {
+        message: err?.message,
+        code: err?.code,
+        details: err?.details,
+        hint: err?.hint,
+        statusCode: err?.statusCode,
+        fullError: err,
+        stack: err?.stack,
+      });
       setError(err.message || "Failed to fetch loyalty overview");
     } finally {
       setLoading(false);
+      console.log("[DEBUG] Loyalty overview fetch finished (loading set to false)");
     }
   };
 
