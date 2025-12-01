@@ -8,10 +8,16 @@ import {
   PageHeader,
   DiscountTable,
   Pagination,
+  CreateDiscountModal,
+  EmptyState,
 } from "@/components/services";
 import { PlusIcon, SearchIcon } from "@/components/icons";
 import { navItems } from "@/config/navigation";
 import { Discount } from "@/types/discount";
+import { useDiscounts } from "@/hooks/useDiscounts";
+import { supabase } from "@/lib/supabase";
+import { ToastContainer } from "@/components/ui/Toast";
+import { EligibilityData } from "@/components/services";
 
 export default function DiscountPage() {
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -30,6 +36,25 @@ export default function DiscountPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedDiscount, setSelectedDiscount] = useState<Discount | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  // Fetch discounts from database
+  const { discounts: allDiscounts, loading, error, refetch } = useDiscounts();
+
+  // Toast notifications
+  const [toasts, setToasts] = useState<Array<{ id: string; message: string; type?: "success" | "error" | "warning" | "info" }>>([]);
+  
+  const showToast = (message: string, type: "success" | "error" | "warning" | "info" = "info") => {
+    const id = `toast-${Date.now()}-${Math.random()}`;
+    setToasts((prev) => [...prev, { id, message, type }]);
+  };
+  
+  const removeToast = (id: string) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  };
 
   // Apply dark mode class to HTML element and save to localStorage
   useEffect(() => {
@@ -41,165 +66,7 @@ export default function DiscountPage() {
       localStorage.setItem("darkMode", "false");
     }
   }, [isDarkMode]);
-
-  // Sample discounts data based on the image
-  const allDiscounts: Discount[] = [
-    {
-      id: "1",
-      name: "Soft Opening",
-      amount: "20%",
-      validPeriod: {
-        start: "01/10/25",
-        end: "31/10/25",
-      },
-      eligibility: "All Services",
-      status: "active",
-    },
-    {
-      id: "2",
-      name: "Grand Opening",
-      amount: "Rp 200.000",
-      validPeriod: {
-        start: "01/10/25",
-        end: "31/10/25",
-      },
-      eligibility: "2 Categories",
-      status: "expired",
-    },
-    {
-      id: "3",
-      name: "Anniversary",
-      amount: "Rp 150.000",
-      validPeriod: {
-        start: "01/10/25",
-        end: "31/10/25",
-      },
-      eligibility: "3 Treatments",
-      status: "expired",
-    },
-    {
-      id: "4",
-      name: "Independence Day",
-      amount: "15%",
-      validPeriod: {
-        start: "01/10/25",
-        end: "31/10/25",
-      },
-      eligibility: "2 Categories",
-      status: "expired",
-    },
-    {
-      id: "5",
-      name: "Womans Day",
-      amount: "Rp 200.000",
-      validPeriod: {
-        start: "01/10/25",
-        end: "31/10/25",
-      },
-      eligibility: "All Services",
-      status: "active",
-    },
-    {
-      id: "6",
-      name: "New Year Sale",
-      amount: "25%",
-      validPeriod: {
-        start: "01/11/25",
-        end: "30/11/25",
-      },
-      eligibility: "All Services",
-      status: "active",
-    },
-    {
-      id: "7",
-      name: "Summer Special",
-      amount: "Rp 300.000",
-      validPeriod: {
-        start: "01/09/25",
-        end: "30/09/25",
-      },
-      eligibility: "3 Treatments",
-      status: "expired",
-    },
-    {
-      id: "8",
-      name: "Holiday Package",
-      amount: "20%",
-      validPeriod: {
-        start: "01/12/25",
-        end: "31/12/25",
-      },
-      eligibility: "2 Categories",
-      status: "active",
-    },
-    {
-      id: "9",
-      name: "Birthday Special",
-      amount: "Rp 250.000",
-      validPeriod: {
-        start: "01/08/25",
-        end: "31/08/25",
-      },
-      eligibility: "All Services",
-      status: "expired",
-    },
-    {
-      id: "10",
-      name: "Flash Sale",
-      amount: "30%",
-      validPeriod: {
-        start: "01/10/25",
-        end: "31/10/25",
-      },
-      eligibility: "3 Treatments",
-      status: "active",
-    },
-    {
-      id: "11",
-      name: "Loyalty Reward",
-      amount: "15%",
-      validPeriod: {
-        start: "01/10/25",
-        end: "31/12/25",
-      },
-      eligibility: "All Services",
-      status: "active",
-    },
-    {
-      id: "12",
-      name: "VIP Exclusive",
-      amount: "Rp 400.000",
-      validPeriod: {
-        start: "01/07/25",
-        end: "31/07/25",
-      },
-      eligibility: "2 Categories",
-      status: "expired",
-    },
-    {
-      id: "13",
-      name: "Weekend Deal",
-      amount: "10%",
-      validPeriod: {
-        start: "01/10/25",
-        end: "31/10/25",
-      },
-      eligibility: "All Services",
-      status: "active",
-    },
-    {
-      id: "14",
-      name: "Early Bird",
-      amount: "Rp 100.000",
-      validPeriod: {
-        start: "01/09/25",
-        end: "30/09/25",
-      },
-      eligibility: "3 Treatments",
-      status: "expired",
-    },
-  ];
-
+    
   // Filter discounts
   const filteredDiscounts = allDiscounts.filter((discount) => {
     const matchesSearch =
@@ -215,11 +82,99 @@ export default function DiscountPage() {
   const endIndex = startIndex + itemsPerPage;
   const paginatedDiscounts = filteredDiscounts.slice(startIndex, endIndex);
 
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
   const locations = ["Islamic Village", "Location 2", "Location 3"];
 
   const handleCreateDiscount = () => {
-    console.log("Create discount");
-    // TODO: Implement create discount functionality
+    setSelectedDiscount(null);
+    setCreateModalOpen(true);
+  };
+
+  const handleDiscountClick = (discount: Discount) => {
+    setSelectedDiscount(discount);
+    setEditModalOpen(true);
+  };
+
+  const handleSaveDiscount = async (discountData: {
+    name: string;
+    type: "nominal" | "percentage";
+    value: number;
+    eligibility?: EligibilityData;
+    validFrom: Date;
+    validUntil: Date;
+  }) => {
+    try {
+      if (selectedDiscount) {
+        // Update existing discount
+        const { error: updateError } = await supabase
+          .from("discounts")
+          .update({
+            name: discountData.name,
+            type: discountData.type,
+            value: discountData.value,
+            eligibility: discountData.eligibility ? JSON.stringify(discountData.eligibility) : null,
+            valid_from: discountData.validFrom.toISOString(),
+            valid_until: discountData.validUntil.toISOString(),
+          })
+          .eq("id", selectedDiscount.id);
+
+        if (updateError) throw updateError;
+        showToast("Discount updated successfully!", "success");
+      } else {
+        // Create new discount
+        const { error: insertError } = await supabase
+          .from("discounts")
+          .insert({
+            name: discountData.name,
+            type: discountData.type,
+            value: discountData.value,
+            eligibility: discountData.eligibility ? JSON.stringify(discountData.eligibility) : null,
+            valid_from: discountData.validFrom.toISOString(),
+            valid_until: discountData.validUntil.toISOString(),
+            status: "active",
+          });
+
+        if (insertError) throw insertError;
+        showToast("Discount created successfully!", "success");
+      }
+
+      await refetch();
+      setEditModalOpen(false);
+      setCreateModalOpen(false);
+      setSelectedDiscount(null);
+    } catch (err: any) {
+      console.error("Error saving discount:", err);
+      showToast(`Failed to save discount: ${err.message || "Unknown error"}`, "error");
+      throw err;
+    }
+  };
+
+  const handleDeleteDiscount = async (discountId: string) => {
+    if (!confirm("Are you sure you want to delete this discount? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      setDeleting(true);
+      const { error: deleteError } = await supabase
+        .from("discounts")
+        .delete()
+        .eq("id", discountId);
+
+      if (deleteError) throw deleteError;
+
+      await refetch();
+      showToast("Discount deleted successfully!", "success");
+    } catch (err: any) {
+      console.error("Error deleting discount:", err);
+      showToast(`Failed to delete discount: ${err.message || "Unknown error"}`, "error");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -276,18 +231,68 @@ export default function DiscountPage() {
           />
         </div>
 
-        {/* Discount Table */}
-        <DiscountTable discounts={paginatedDiscounts} />
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-12 text-[#706C6B] dark:text-[#C1A7A3]">
+            Loading discounts...
+          </div>
+        )}
 
-        {/* Pagination */}
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalItems={filteredDiscounts.length}
-          itemsPerPage={itemsPerPage}
-          onPageChange={setCurrentPage}
+        {/* Error State */}
+        {error && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
+            <p className="text-sm text-red-600 dark:text-red-400 mb-4">
+              Error: {error}
+            </p>
+            <button
+              onClick={() => refetch()}
+              className="px-4 py-2 bg-[#C1A7A3] text-white rounded-lg hover:bg-[#A8928E] transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {/* Discount Table */}
+        {!loading && !error && (
+          <>
+            {paginatedDiscounts.length > 0 ? (
+              <>
+                <DiscountTable 
+                  discounts={paginatedDiscounts} 
+                  onDiscountClick={handleDiscountClick}
+                  onDelete={handleDeleteDiscount}
+                />
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={filteredDiscounts.length}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={setCurrentPage}
+                />
+              </>
+            ) : (
+              <EmptyState message="No discounts found. Create a discount to get started." />
+            )}
+          </>
+        )}
+
+        {/* Create/Edit Discount Modal */}
+        <CreateDiscountModal
+          isOpen={createModalOpen || editModalOpen}
+          onClose={() => {
+            setCreateModalOpen(false);
+            setEditModalOpen(false);
+            setSelectedDiscount(null);
+          }}
+          discount={selectedDiscount || undefined}
+          onSave={handleSaveDiscount}
+          onError={(message) => showToast(message, "error")}
         />
       </div>
+      
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </SejenakDashboardLayout>
   );
 }

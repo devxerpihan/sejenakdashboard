@@ -1,27 +1,28 @@
 "use client";
 
 import React from "react";
-import { Treatment } from "@/types/treatment";
+import { Bundle } from "@/types/bundle";
 import { StatusBadge } from "./StatusBadge";
+import { TrashIcon } from "@/components/icons";
 
-interface TreatmentTableProps {
-  treatments: Treatment[];
-  onTreatmentClick?: (treatment: Treatment) => void;
+interface BundleTableProps {
+  bundles: Bundle[];
+  onBundleClick?: (bundle: Bundle) => void;
+  onDelete?: (bundleId: string) => void;
 }
 
-export const TreatmentTable: React.FC<TreatmentTableProps> = ({
-  treatments,
-  onTreatmentClick,
+export const BundleTable: React.FC<BundleTableProps> = ({
+  bundles,
+  onBundleClick,
+  onDelete,
 }) => {
-  const formatDuration = (minutes: number) => {
-    return `${minutes} minutes`;
+  const formatCurrency = (value: number) => {
+    return `Rp ${value.toLocaleString("id-ID")}`;
   };
 
-  const formatPrice = (price: number | string) => {
-    if (typeof price === "string") {
-      return price;
-    }
-    return `Rp ${price.toLocaleString("id-ID")}`;
+  const truncateItems = (items: string, maxLength: number = 30) => {
+    if (items.length <= maxLength) return items;
+    return items.substring(0, maxLength) + "...";
   };
 
   return (
@@ -31,54 +32,75 @@ export const TreatmentTable: React.FC<TreatmentTableProps> = ({
           <thead className="bg-[#F0EEED] dark:bg-[#3D3B3A] border-b border-zinc-200 dark:border-zinc-800">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-[#706C6B] dark:text-[#C1A7A3] uppercase tracking-wider">
-                Treatment
+                Name
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-[#706C6B] dark:text-[#C1A7A3] uppercase tracking-wider">
-                Category
+                Items
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-[#706C6B] dark:text-[#C1A7A3] uppercase tracking-wider">
-                Duration
+                Pricing
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-[#706C6B] dark:text-[#C1A7A3] uppercase tracking-wider">
-                Price
+                Branch
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-[#706C6B] dark:text-[#C1A7A3] uppercase tracking-wider">
                 Status
               </th>
+              {onDelete && (
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#706C6B] dark:text-[#C1A7A3] uppercase tracking-wider">
+                  Action
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-            {treatments.map((treatment) => (
+            {bundles.map((bundle) => (
               <tr
-                key={treatment.id}
-                onClick={() => onTreatmentClick?.(treatment)}
+                key={bundle.id}
                 className={`hover:bg-[#F0EEED] dark:hover:bg-[#3D3B3A] transition-colors ${
-                  onTreatmentClick ? "cursor-pointer" : ""
+                  onBundleClick ? "cursor-pointer" : ""
                 }`}
+                onClick={() => onBundleClick && onBundleClick(bundle)}
               >
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-[#191919] dark:text-[#F0EEED]">
-                    {treatment.name}
+                    {bundle.name}
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="text-sm text-[#706C6B] dark:text-[#C1A7A3]">
+                    {truncateItems(bundle.items)}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-[#706C6B] dark:text-[#C1A7A3]">
-                    {treatment.category}
+                    {formatCurrency(bundle.pricing)}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-[#706C6B] dark:text-[#C1A7A3]">
-                    {formatDuration(treatment.duration)}
+                    {bundle.branch}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-[#706C6B] dark:text-[#C1A7A3]">
-                    {formatPrice(treatment.price)}
-                  </div>
+                  <StatusBadge status={bundle.status} />
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <StatusBadge status={treatment.status} />
-                </td>
+                {onDelete && (
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm(`Are you sure you want to delete "${bundle.name}"?`)) {
+                          onDelete(bundle.id);
+                        }
+                      }}
+                      className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors"
+                      title="Delete bundle"
+                    >
+                      <TrashIcon />
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

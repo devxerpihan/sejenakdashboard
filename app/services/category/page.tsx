@@ -8,10 +8,15 @@ import {
   PageHeader,
   CategoryTable,
   Pagination,
+  AssignToTreatmentModal,
+  CreateCategoryModal,
+  EmptyState,
 } from "@/components/services";
 import { PlusIcon, SearchIcon } from "@/components/icons";
 import { navItems } from "@/config/navigation";
 import { Category } from "@/types/category";
+import { useCategories } from "@/hooks/useCategories";
+import { ToastContainer } from "@/components/ui/Toast";
 
 export default function CategoryPage() {
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -30,6 +35,24 @@ export default function CategoryPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [selectedCategoryName, setSelectedCategoryName] = useState("");
+
+  // Fetch categories from database
+  const { categories: allCategories, loading, error, refetch } = useCategories();
+
+  // Toast notifications
+  const [toasts, setToasts] = useState<Array<{ id: string; message: string; type?: "success" | "error" | "warning" | "info" }>>([]);
+  
+  const showToast = (message: string, type: "success" | "error" | "warning" | "info" = "info") => {
+    const id = `toast-${Date.now()}-${Math.random()}`;
+    setToasts((prev) => [...prev, { id, message, type }]);
+  };
+  
+  const removeToast = (id: string) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  };
 
   // Apply dark mode class to HTML element and save to localStorage
   useEffect(() => {
@@ -41,80 +64,6 @@ export default function CategoryPage() {
       localStorage.setItem("darkMode", "false");
     }
   }, [isDarkMode]);
-
-  // Sample categories data based on the image
-  const allCategories: Category[] = [
-    {
-      id: "1",
-      name: "Body",
-      totalTreatment: 3,
-    },
-    {
-      id: "2",
-      name: "Nail",
-      totalTreatment: 3,
-    },
-    {
-      id: "3",
-      name: "Hair",
-      totalTreatment: 8,
-    },
-    {
-      id: "4",
-      name: "Kids",
-      totalTreatment: 7,
-    },
-    {
-      id: "5",
-      name: "Pilates",
-      totalTreatment: 5,
-    },
-    {
-      id: "6",
-      name: "Face",
-      totalTreatment: 4,
-    },
-    {
-      id: "7",
-      name: "Massage",
-      totalTreatment: 6,
-    },
-    {
-      id: "8",
-      name: "Spa",
-      totalTreatment: 2,
-    },
-    {
-      id: "9",
-      name: "Wellness",
-      totalTreatment: 5,
-    },
-    {
-      id: "10",
-      name: "Beauty",
-      totalTreatment: 3,
-    },
-    {
-      id: "11",
-      name: "Facial",
-      totalTreatment: 4,
-    },
-    {
-      id: "12",
-      name: "Haircut",
-      totalTreatment: 2,
-    },
-    {
-      id: "13",
-      name: "Manicure",
-      totalTreatment: 3,
-    },
-    {
-      id: "14",
-      name: "Pedicure",
-      totalTreatment: 3,
-    },
-  ];
 
   // Filter categories
   const filteredCategories = allCategories.filter((category) => {
@@ -134,14 +83,35 @@ export default function CategoryPage() {
   const locations = ["Islamic Village", "Location 2", "Location 3"];
 
   const handleAssignToTreatment = (categoryId: string) => {
-    console.log("Assign category to treatment:", categoryId);
-    // TODO: Implement assign to treatment functionality
+    const category = allCategories.find((c) => c.id === categoryId);
+    if (category) {
+      setSelectedCategoryName(category.name);
+      setAssignModalOpen(true);
+    }
   };
 
   const handleCreateCategory = () => {
-    console.log("Create category");
-    // TODO: Implement create category functionality
+    setCreateModalOpen(true);
   };
+
+  const handleSaveCategory = async (categoryName: string) => {
+    // Categories are stored as text in treatments table
+    // Creating a category just means it's available to be used
+    // The category will be created when a treatment is assigned to it
+    showToast(`Category "${categoryName}" is now available to use. Assign it to treatments to start using it.`, "success");
+    // Refetch to update the list (though it won't show until treatments use it)
+    await refetch();
+  };
+
+  const handleAssignSave = async () => {
+    showToast("Category assigned to treatments successfully!", "success");
+    await refetch();
+  };
+
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   return (
     <SejenakDashboardLayout
@@ -197,21 +167,72 @@ export default function CategoryPage() {
           />
         </div>
 
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-12 text-[#706C6B] dark:text-[#C1A7A3]">
+            Loading categories...
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
+            <p className="text-sm text-red-600 dark:text-red-400 mb-4">
+              Error: {error}
+            </p>
+            <button
+              onClick={() => refetch()}
+              className="px-4 py-2 bg-[#C1A7A3] text-white rounded-lg hover:bg-[#A8928E] transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
         {/* Category Table */}
-        <CategoryTable
-          categories={paginatedCategories}
-          onAssignToTreatment={handleAssignToTreatment}
+        {!loading && !error && (
+          <>
+            {paginatedCategories.length > 0 ? (
+              <>
+                <CategoryTable
+                  categories={paginatedCategories}
+                  onAssignToTreatment={handleAssignToTreatment}
+                />
+
+                {/* Pagination */}
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={filteredCategories.length}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={setCurrentPage}
+                />
+              </>
+            ) : (
+              <EmptyState message="No categories found. Create a category to get started." />
+            )}
+          </>
+        )}
+
+        {/* Modals */}
+        <AssignToTreatmentModal
+          isOpen={assignModalOpen}
+          onClose={() => setAssignModalOpen(false)}
+          categoryName={selectedCategoryName}
+          onSave={handleAssignSave}
+          onError={(message) => showToast(message, "error")}
         />
 
-        {/* Pagination */}
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalItems={filteredCategories.length}
-          itemsPerPage={itemsPerPage}
-          onPageChange={setCurrentPage}
+        <CreateCategoryModal
+          isOpen={createModalOpen}
+          onClose={() => setCreateModalOpen(false)}
+          onSave={handleSaveCategory}
+          onError={(message) => showToast(message, "error")}
         />
       </div>
+      
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </SejenakDashboardLayout>
   );
 }

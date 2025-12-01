@@ -24,4 +24,15 @@ export { GroupedBarChart } from "./GroupedBarChart";
 export { WordCloud } from "./WordCloud";
 export { ImprovementSuggestion } from "./ImprovementSuggestion";
 export { Tabs } from "./Tabs";
+export { TreatmentForm, type TreatmentFormRef } from "./TreatmentForm";
+export { ImageUpload } from "./ImageUpload";
+export { PricingRulesTable } from "./PricingRulesTable";
+export { AssignToTreatmentModal } from "./AssignToTreatmentModal";
+export { CreateCategoryModal } from "./CreateCategoryModal";
+export { CreateBundleModal } from "./CreateBundleModal";
+export { BundleTable } from "./BundleTable";
+export { CreatePromoModal } from "./CreatePromoModal";
+export { CreateDiscountModal } from "./CreateDiscountModal";
+export { EligibilitySelector } from "./EligibilitySelector";
+export type { EligibilityData, EligibilityType } from "./EligibilitySelector";
 

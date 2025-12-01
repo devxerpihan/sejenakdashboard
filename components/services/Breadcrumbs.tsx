@@ -6,6 +6,7 @@ import Link from "next/link";
 interface BreadcrumbItem {
   label: string;
   href?: string;
+  onClick?: (e: React.MouseEvent) => void;
 }
 
 interface BreadcrumbsProps {
@@ -20,13 +21,22 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ items }) => {
           {index > 0 && (
             <span className="text-[#706C6B] dark:text-[#C1A7A3]">/</span>
           )}
-          {item.href && index < items.length - 1 ? (
-            <Link
-              href={item.href}
-              className="text-[#706C6B] dark:text-[#C1A7A3] hover:text-[#191919] dark:hover:text-[#F0EEED] transition-colors"
-            >
-              {item.label}
-            </Link>
+          {item.href || item.onClick ? (
+            item.onClick ? (
+              <button
+                onClick={item.onClick}
+                className="text-[#706C6B] dark:text-[#C1A7A3] hover:text-[#191919] dark:hover:text-[#F0EEED] transition-colors"
+              >
+                {item.label}
+              </button>
+            ) : (
+              <Link
+                href={item.href!}
+                className="text-[#706C6B] dark:text-[#C1A7A3] hover:text-[#191919] dark:hover:text-[#F0EEED] transition-colors"
+              >
+                {item.label}
+              </Link>
+            )
           ) : (
             <span
               className={

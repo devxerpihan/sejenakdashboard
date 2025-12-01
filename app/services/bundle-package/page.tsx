@@ -7,9 +7,16 @@ import {
   Breadcrumbs,
   PageHeader,
   EmptyState,
+  CreateBundleModal,
+  BundleTable,
+  Pagination,
 } from "@/components/services";
 import { PlusIcon, SearchIcon } from "@/components/icons";
 import { navItems } from "@/config/navigation";
+import { useBundles } from "@/hooks/useBundles";
+import { Bundle } from "@/types/bundle";
+import { supabase } from "@/lib/supabase";
+import { ToastContainer } from "@/components/ui/Toast";
 
 export default function BundlePackagePage() {
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -27,6 +34,24 @@ export default function BundlePackagePage() {
   });
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  // Fetch bundles from database
+  const { bundles: allBundles, loading, error, refetch } = useBundles();
+
+  // Toast notifications
+  const [toasts, setToasts] = useState<Array<{ id: string; message: string; type?: "success" | "error" | "warning" | "info" }>>([]);
+  
+  const showToast = (message: string, type: "success" | "error" | "warning" | "info" = "info") => {
+    const id = `toast-${Date.now()}-${Math.random()}`;
+    setToasts((prev) => [...prev, { id, message, type }]);
+  };
+  
+  const removeToast = (id: string) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  };
 
   // Apply dark mode class to HTML element and save to localStorage
   useEffect(() => {
@@ -40,14 +65,122 @@ export default function BundlePackagePage() {
   }, [isDarkMode]);
 
   const locations = ["Islamic Village", "Location 2", "Location 3"];
+  const branches = ["Sejenak Islamic Village"];
+
+  // Filter bundles
+  const filteredBundles = allBundles.filter((bundle) => {
+    const matchesSearch =
+      searchQuery === "" ||
+      bundle.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch;
+  });
+
+  // Pagination
+  const itemsPerPage = 5;
+  const totalPages = Math.ceil(filteredBundles.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedBundles = filteredBundles.slice(startIndex, endIndex);
+
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   const handleCreateBundle = () => {
-    console.log("Create bundle");
-    // TODO: Implement create bundle functionality
+    setCreateModalOpen(true);
   };
 
-  // For now, we'll show empty state - when bundles are added, this can be replaced with a table
-  const bundles: any[] = [];
+  const handleSaveBundle = async (bundleData: { 
+    name: string; 
+    branch: string; 
+    image?: string;
+    treatments: string[];
+    pricing: number;
+  }) => {
+    try {
+      // Fetch treatment names
+      const { data: treatmentsData } = await supabase
+        .from("treatments")
+        .select("id, name")
+        .in("id", bundleData.treatments);
+
+      const treatmentNames = (treatmentsData || []).map((t: any) => t.name);
+      const itemsString = treatmentNames.join(", ");
+
+      // Insert bundle package
+      const { data: bundleDataResult, error: insertError } = await supabase
+        .from("bundle_packages")
+        .insert({
+          name: bundleData.name,
+          branch: bundleData.branch,
+          image_url: bundleData.image || null,
+          items: itemsString,
+          pricing: bundleData.pricing,
+          status: "active",
+        })
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+
+      // Save bundle treatments relationship
+      if (bundleData.treatments.length > 0 && bundleDataResult) {
+        const bundleTreatments = bundleData.treatments.map((treatmentId) => ({
+          bundle_package_id: bundleDataResult.id,
+          treatment_id: treatmentId,
+        }));
+
+        const { error: bundleTreatmentsError } = await supabase
+          .from("bundle_treatments")
+          .insert(bundleTreatments);
+
+        if (bundleTreatmentsError) {
+          console.error("Error saving bundle treatments:", bundleTreatmentsError);
+          // Don't throw - bundle is created, treatments can be added later
+        }
+      }
+
+      await refetch();
+      showToast("Bundle package created successfully!", "success");
+    } catch (err: any) {
+      console.error("Error creating bundle:", err);
+      showToast(`Failed to create bundle: ${err.message || "Unknown error"}`, "error");
+      throw err;
+    }
+  };
+
+  const handleDeleteBundle = async (bundleId: string) => {
+    if (!confirm("Are you sure you want to delete this bundle? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      setDeleting(true);
+
+      // Delete bundle treatments first (cascade should handle this, but being explicit)
+      await supabase
+        .from("bundle_treatments")
+        .delete()
+        .eq("bundle_package_id", bundleId);
+
+      // Delete bundle package
+      const { error: deleteError } = await supabase
+        .from("bundle_packages")
+        .delete()
+        .eq("id", bundleId);
+
+      if (deleteError) throw deleteError;
+
+      await refetch();
+      showToast("Bundle deleted successfully!", "success");
+    } catch (err: any) {
+      console.error("Error deleting bundle:", err);
+      showToast(`Failed to delete bundle: ${err.message || "Unknown error"}`, "error");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <SejenakDashboardLayout
@@ -103,16 +236,63 @@ export default function BundlePackagePage() {
           />
         </div>
 
-        {/* Empty State or Bundle Table */}
-        {bundles.length === 0 ? (
-          <EmptyState message="No data yet" />
-        ) : (
-          <div>
-            {/* TODO: Add BundleTable component when bundles are implemented */}
-            <p>Bundle table will go here</p>
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-12 text-[#706C6B] dark:text-[#C1A7A3]">
+            Loading bundles...
           </div>
         )}
+
+        {/* Error State */}
+        {error && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
+            <p className="text-sm text-red-600 dark:text-red-400 mb-4">
+              Error: {error}
+            </p>
+            <button
+              onClick={() => refetch()}
+              className="px-4 py-2 bg-[#C1A7A3] text-white rounded-lg hover:bg-[#A8928E] transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {/* Bundle Table */}
+        {!loading && !error && (
+          <>
+            {paginatedBundles.length > 0 ? (
+              <>
+                <BundleTable 
+                  bundles={paginatedBundles} 
+                  onDelete={handleDeleteBundle}
+                />
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={filteredBundles.length}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={setCurrentPage}
+                />
+              </>
+            ) : (
+              <EmptyState message="No bundles found. Create a bundle to get started." />
+            )}
+          </>
+        )}
+
+        {/* Create Bundle Modal */}
+        <CreateBundleModal
+          isOpen={createModalOpen}
+          onClose={() => setCreateModalOpen(false)}
+          onSave={handleSaveBundle}
+          branches={branches}
+          onError={(message) => showToast(message, "error")}
+        />
       </div>
+      
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </SejenakDashboardLayout>
   );
 }

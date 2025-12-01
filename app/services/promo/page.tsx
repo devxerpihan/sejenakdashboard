@@ -8,10 +8,16 @@ import {
   PageHeader,
   PromoTable,
   Pagination,
+  CreatePromoModal,
+  EmptyState,
 } from "@/components/services";
 import { PlusIcon, SearchIcon } from "@/components/icons";
 import { navItems } from "@/config/navigation";
 import { Promo } from "@/types/promo";
+import { usePromos } from "@/hooks/usePromos";
+import { supabase } from "@/lib/supabase";
+import { ToastContainer } from "@/components/ui/Toast";
+import { EligibilityData } from "@/components/services";
 
 export default function PromoPage() {
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -30,6 +36,23 @@ export default function PromoPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  // Fetch promos from database
+  const { promos: allPromos, loading, error, refetch } = usePromos();
+
+  // Toast notifications
+  const [toasts, setToasts] = useState<Array<{ id: string; message: string; type?: "success" | "error" | "warning" | "info" }>>([]);
+  
+  const showToast = (message: string, type: "success" | "error" | "warning" | "info" = "info") => {
+    const id = `toast-${Date.now()}-${Math.random()}`;
+    setToasts((prev) => [...prev, { id, message, type }]);
+  };
+  
+  const removeToast = (id: string) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  };
 
   // Apply dark mode class to HTML element and save to localStorage
   useEffect(() => {
@@ -42,193 +65,6 @@ export default function PromoPage() {
     }
   }, [isDarkMode]);
 
-  // Sample promos data based on the image
-  const allPromos: Promo[] = [
-    {
-      id: "1",
-      code: "AUTOSEP25",
-      amount: "20%",
-      quota: 100,
-      usageCount: 15,
-      validPeriod: {
-        start: "01/10/25",
-        end: "31/10/25",
-      },
-      targetting: "All",
-      status: "active",
-    },
-    {
-      id: "2",
-      code: "BDAYSJNK",
-      amount: "Rp 200.000",
-      quota: 50,
-      usageCount: 50,
-      validPeriod: {
-        start: "01/10/25",
-        end: "31/10/25",
-      },
-      targetting: "Bliss",
-      status: "expired",
-    },
-    {
-      id: "3",
-      code: "ANNIV10",
-      amount: "Rp 200.000",
-      quota: 50,
-      usageCount: 50,
-      validPeriod: {
-        start: "01/10/25",
-        end: "31/10/25",
-      },
-      targetting: "VIP",
-      status: "expired",
-    },
-    {
-      id: "4",
-      code: "GLOW25",
-      amount: "Rp 150.000",
-      quota: 75,
-      usageCount: 75,
-      validPeriod: {
-        start: "01/10/25",
-        end: "31/10/25",
-      },
-      targetting: "VIP",
-      status: "expired",
-    },
-    {
-      id: "5",
-      code: "WEEKENDSPA",
-      amount: "15%",
-      quota: 75,
-      usageCount: 75,
-      validPeriod: {
-        start: "01/10/25",
-        end: "31/10/25",
-      },
-      targetting: "VIP",
-      status: "active",
-    },
-    {
-      id: "6",
-      code: "SUMMER20",
-      amount: "20%",
-      quota: 100,
-      usageCount: 45,
-      validPeriod: {
-        start: "01/11/25",
-        end: "30/11/25",
-      },
-      targetting: "All",
-      status: "active",
-    },
-    {
-      id: "7",
-      code: "NEWYEAR50",
-      amount: "Rp 500.000",
-      quota: 30,
-      usageCount: 30,
-      validPeriod: {
-        start: "01/12/24",
-        end: "31/12/24",
-      },
-      targetting: "VIP",
-      status: "expired",
-    },
-    {
-      id: "8",
-      code: "WELCOME10",
-      amount: "10%",
-      quota: 200,
-      usageCount: 120,
-      validPeriod: {
-        start: "01/10/25",
-        end: "31/12/25",
-      },
-      targetting: "All",
-      status: "active",
-    },
-    {
-      id: "9",
-      code: "BLISSVIP",
-      amount: "Rp 300.000",
-      quota: 40,
-      usageCount: 25,
-      validPeriod: {
-        start: "01/10/25",
-        end: "31/10/25",
-      },
-      targetting: "Bliss",
-      status: "active",
-    },
-    {
-      id: "10",
-      code: "FREESPA",
-      amount: "Rp 100.000",
-      quota: 60,
-      usageCount: 60,
-      validPeriod: {
-        start: "01/09/25",
-        end: "30/09/25",
-      },
-      targetting: "All",
-      status: "expired",
-    },
-    {
-      id: "11",
-      code: "HAIRDAY",
-      amount: "25%",
-      quota: 80,
-      usageCount: 35,
-      validPeriod: {
-        start: "01/10/25",
-        end: "31/10/25",
-      },
-      targetting: "VIP",
-      status: "active",
-    },
-    {
-      id: "12",
-      code: "BIRTHDAY",
-      amount: "Rp 250.000",
-      quota: 50,
-      usageCount: 50,
-      validPeriod: {
-        start: "01/08/25",
-        end: "31/08/25",
-      },
-      targetting: "Bliss",
-      status: "expired",
-    },
-    {
-      id: "13",
-      code: "FLASH30",
-      amount: "30%",
-      quota: 25,
-      usageCount: 12,
-      validPeriod: {
-        start: "01/10/25",
-        end: "31/10/25",
-      },
-      targetting: "VIP",
-      status: "active",
-    },
-    {
-      id: "14",
-      code: "LOYALTY15",
-      amount: "15%",
-      quota: 150,
-      usageCount: 90,
-      validPeriod: {
-        start: "01/10/25",
-        end: "31/12/25",
-      },
-      targetting: "All",
-      status: "active",
-    },
-  ];
-
-  // Filter promos
   const filteredPromos = allPromos.filter((promo) => {
     const matchesSearch =
       searchQuery === "" ||
@@ -243,11 +79,76 @@ export default function PromoPage() {
   const endIndex = startIndex + itemsPerPage;
   const paginatedPromos = filteredPromos.slice(startIndex, endIndex);
 
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
   const locations = ["Islamic Village", "Location 2", "Location 3"];
 
   const handleCreatePromo = () => {
-    console.log("Create promo");
-    // TODO: Implement create promo functionality
+    setCreateModalOpen(true);
+  };
+
+  const handleSavePromo = async (promoData: {
+    code: string;
+    type: "nominal" | "percentage";
+    value: number;
+    quota: number;
+    minTransaction?: number;
+    eligibility?: EligibilityData;
+    validFrom: Date;
+    validUntil: Date;
+  }) => {
+    try {
+      const { error: insertError } = await supabase
+        .from("promos")
+        .insert({
+          code: promoData.code,
+          type: promoData.type,
+          value: promoData.value,
+          quota: promoData.quota,
+          usage_count: 0,
+          min_transaction: promoData.minTransaction || null,
+          eligibility: promoData.eligibility ? JSON.stringify(promoData.eligibility) : null,
+          valid_from: promoData.validFrom.toISOString(),
+          valid_until: promoData.validUntil.toISOString(),
+          status: "active",
+        });
+
+      if (insertError) throw insertError;
+
+      await refetch();
+      showToast("Promo created successfully!", "success");
+    } catch (err: any) {
+      console.error("Error creating promo:", err);
+      showToast(`Failed to create promo: ${err.message || "Unknown error"}`, "error");
+      throw err;
+    }
+  };
+
+  const handleDeletePromo = async (promoId: string) => {
+    if (!confirm("Are you sure you want to delete this promo? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      setDeleting(true);
+      const { error: deleteError } = await supabase
+        .from("promos")
+        .delete()
+        .eq("id", promoId);
+
+      if (deleteError) throw deleteError;
+
+      await refetch();
+      showToast("Promo deleted successfully!", "success");
+    } catch (err: any) {
+      console.error("Error deleting promo:", err);
+      showToast(`Failed to delete promo: ${err.message || "Unknown error"}`, "error");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -304,18 +205,59 @@ export default function PromoPage() {
           />
         </div>
 
-        {/* Promo Table */}
-        <PromoTable promos={paginatedPromos} />
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-12 text-[#706C6B] dark:text-[#C1A7A3]">
+            Loading promos...
+          </div>
+        )}
 
-        {/* Pagination */}
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalItems={filteredPromos.length}
-          itemsPerPage={itemsPerPage}
-          onPageChange={setCurrentPage}
+        {/* Error State */}
+        {error && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
+            <p className="text-sm text-red-600 dark:text-red-400 mb-4">
+              Error: {error}
+            </p>
+            <button
+              onClick={() => refetch()}
+              className="px-4 py-2 bg-[#C1A7A3] text-white rounded-lg hover:bg-[#A8928E] transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {/* Promo Table */}
+        {!loading && !error && (
+          <>
+            {paginatedPromos.length > 0 ? (
+              <>
+                <PromoTable promos={paginatedPromos} onDelete={handleDeletePromo} />
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={filteredPromos.length}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={setCurrentPage}
+                />
+              </>
+            ) : (
+              <EmptyState message="No promos found. Create a promo to get started." />
+            )}
+          </>
+        )}
+
+        {/* Create Promo Modal */}
+        <CreatePromoModal
+          isOpen={createModalOpen}
+          onClose={() => setCreateModalOpen(false)}
+          onSave={handleSavePromo}
+          onError={(message) => showToast(message, "error")}
         />
       </div>
+      
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </SejenakDashboardLayout>
   );
 }
