@@ -43,4 +43,6 @@ export { CreateTreatmentModal } from "./CreateTreatmentModal";
 export { EligibilitySelector } from "./EligibilitySelector";
 export type { EligibilityData, EligibilityType } from "./EligibilitySelector";
 export { FeedbackTable } from "./FeedbackTable";
+export { RoomTable } from "./RoomTable";
+export { CreateRoomModal } from "./CreateRoomModal";
 

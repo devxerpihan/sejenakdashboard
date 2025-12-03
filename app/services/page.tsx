@@ -6,7 +6,7 @@ import { Footer } from "@/components/layout";
 import { Breadcrumbs } from "@/components/services";
 import { navItems } from "@/config/navigation";
 
-export default function SettingsPage() {
+export default function ServicesPage() {
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("darkMode");
@@ -53,116 +53,122 @@ export default function SettingsPage() {
         {/* Breadcrumbs */}
         <Breadcrumbs
           items={[
-            { label: "Settings" },
+            { label: "Services" },
           ]}
         />
 
         {/* Page Header */}
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-[#191919] dark:text-[#F0EEED]">
-            Settings
+            Services
           </h1>
           <p className="text-sm text-[#706C6B] dark:text-[#C1A7A3] mt-2">
-            Manage your account settings and preferences
+            Manage your services, treatments, packages, and promotions
           </p>
         </div>
 
-        {/* Settings Content */}
+        {/* Services Content */}
         <div className="space-y-6">
-          {/* Settings Sections */}
+          {/* Services Sections */}
           <div className="bg-white dark:bg-[#2A2A2A] rounded-lg border border-[#E5E7EB] dark:border-[#404040] p-6">
             <h2 className="text-xl font-semibold text-[#191919] dark:text-[#F0EEED] mb-4">
-              Settings Sections
+              Services Sections
             </h2>
             <div className="space-y-4">
               <div className="p-4 border border-[#E5E7EB] dark:border-[#404040] rounded-lg hover:bg-[#F9FAFB] dark:hover:bg-[#333333] transition-colors">
                 <h3 className="font-medium text-[#191919] dark:text-[#F0EEED] mb-1">
-                  Notification Settings
+                  Treatment
                 </h3>
                 <p className="text-sm text-[#706C6B] dark:text-[#C1A7A3]">
-                  Configure your notification preferences
+                  Manage treatments and their pricing
                 </p>
                 <a
-                  href="/settings/notification"
+                  href="/services/treatment"
                   className="text-sm text-[#C1A7A3] hover:text-[#A8928E] mt-2 inline-block"
                 >
-                  Manage notifications →
+                  Manage treatments →
                 </a>
               </div>
 
               <div className="p-4 border border-[#E5E7EB] dark:border-[#404040] rounded-lg hover:bg-[#F9FAFB] dark:hover:bg-[#333333] transition-colors">
                 <h3 className="font-medium text-[#191919] dark:text-[#F0EEED] mb-1">
-                  Account Settings
+                  Category
                 </h3>
                 <p className="text-sm text-[#706C6B] dark:text-[#C1A7A3]">
-                  Manage your account information and security
+                  Organize treatments by categories
                 </p>
                 <a
-                  href="/settings/account"
+                  href="/services/category"
                   className="text-sm text-[#C1A7A3] hover:text-[#A8928E] mt-2 inline-block"
                 >
-                  Manage account →
+                  Manage categories →
                 </a>
               </div>
 
               <div className="p-4 border border-[#E5E7EB] dark:border-[#404040] rounded-lg hover:bg-[#F9FAFB] dark:hover:bg-[#333333] transition-colors">
                 <h3 className="font-medium text-[#191919] dark:text-[#F0EEED] mb-1">
-                  Preferences
+                  Bundle Package
                 </h3>
                 <p className="text-sm text-[#706C6B] dark:text-[#C1A7A3]">
-                  Customize your dashboard preferences and display options
+                  Create and manage service bundles
                 </p>
                 <a
-                  href="/settings/preferences"
+                  href="/services/bundle-package"
                   className="text-sm text-[#C1A7A3] hover:text-[#A8928E] mt-2 inline-block"
                 >
-                  Manage preferences →
+                  Manage bundles →
+                </a>
+              </div>
+
+              <div className="p-4 border border-[#E5E7EB] dark:border-[#404040] rounded-lg hover:bg-[#F9FAFB] dark:hover:bg-[#333333] transition-colors">
+                <h3 className="font-medium text-[#191919] dark:text-[#F0EEED] mb-1">
+                  Promo
+                </h3>
+                <p className="text-sm text-[#706C6B] dark:text-[#C1A7A3]">
+                  Create and manage promotional offers
+                </p>
+                <a
+                  href="/services/promo"
+                  className="text-sm text-[#C1A7A3] hover:text-[#A8928E] mt-2 inline-block"
+                >
+                  Manage promos →
+                </a>
+              </div>
+
+              <div className="p-4 border border-[#E5E7EB] dark:border-[#404040] rounded-lg hover:bg-[#F9FAFB] dark:hover:bg-[#333333] transition-colors">
+                <h3 className="font-medium text-[#191919] dark:text-[#F0EEED] mb-1">
+                  Discount
+                </h3>
+                <p className="text-sm text-[#706C6B] dark:text-[#C1A7A3]">
+                  Manage discount rules and eligibility
+                </p>
+                <a
+                  href="/services/discount"
+                  className="text-sm text-[#C1A7A3] hover:text-[#A8928E] mt-2 inline-block"
+                >
+                  Manage discounts →
+                </a>
+              </div>
+
+              <div className="p-4 border border-[#E5E7EB] dark:border-[#404040] rounded-lg hover:bg-[#F9FAFB] dark:hover:bg-[#333333] transition-colors">
+                <h3 className="font-medium text-[#191919] dark:text-[#F0EEED] mb-1">
+                  Room
+                </h3>
+                <p className="text-sm text-[#706C6B] dark:text-[#C1A7A3]">
+                  Manage rooms and their configurations
+                </p>
+                <a
+                  href="/services/room"
+                  className="text-sm text-[#C1A7A3] hover:text-[#A8928E] mt-2 inline-block"
+                >
+                  Manage rooms →
                 </a>
               </div>
             </div>
-          </div>
-
-          {/* Quick Settings */}
-          <div className="bg-white dark:bg-[#2A2A2A] rounded-lg border border-[#E5E7EB] dark:border-[#404040] p-6">
-            <h2 className="text-xl font-semibold text-[#191919] dark:text-[#F0EEED] mb-4">
-              Quick Settings
-            </h2>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium text-[#191919] dark:text-[#F0EEED]">
-                    Dark Mode
-                  </h3>
-                  <p className="text-sm text-[#706C6B] dark:text-[#C1A7A3]">
-                    Toggle dark mode theme
-                  </p>
-                </div>
-                <button
-                  onClick={() => setIsDarkMode((prev) => !prev)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    isDarkMode ? "bg-[#C1A7A3]" : "bg-[#E5E7EB]"
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      isDarkMode ? "translate-x-6" : "translate-x-1"
-                    }`}
-                  />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Placeholder Message */}
-          <div className="bg-[#F9FAFB] dark:bg-[#1F1F1F] rounded-lg border border-[#E5E7EB] dark:border-[#404040] p-8 text-center">
-            <p className="text-[#706C6B] dark:text-[#C1A7A3]">
-              This is a placeholder settings page. More settings options will be added soon.
-            </p>
           </div>
         </div>
       </div>
     </SejenakDashboardLayout>
   );
 }
-
 

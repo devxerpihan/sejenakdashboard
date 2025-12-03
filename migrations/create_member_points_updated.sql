@@ -38,3 +38,4 @@ CREATE TRIGGER trigger_update_member_tier BEFORE
 UPDATE ON member_points FOR EACH ROW
 EXECUTE FUNCTION update_member_tier ();
 
+

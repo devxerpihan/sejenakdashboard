@@ -24,6 +24,7 @@ const allNavItems: NavItem[] = [
       { label: "Bundle Package", href: "/services/bundle-package", icon: <ServicesIcon /> },
       { label: "Promo", href: "/services/promo", icon: <ServicesIcon /> },
       { label: "Discount", href: "/services/discount", icon: <ServicesIcon /> },
+      { label: "Room", href: "/services/room", icon: <ServicesIcon /> },
     ],
   },
   {

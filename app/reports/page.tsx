@@ -6,7 +6,7 @@ import { Footer } from "@/components/layout";
 import { Breadcrumbs } from "@/components/services";
 import { navItems } from "@/config/navigation";
 
-export default function SettingsPage() {
+export default function ReportsPage() {
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("darkMode");
@@ -53,116 +53,77 @@ export default function SettingsPage() {
         {/* Breadcrumbs */}
         <Breadcrumbs
           items={[
-            { label: "Settings" },
+            { label: "Reports" },
           ]}
         />
 
         {/* Page Header */}
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-[#191919] dark:text-[#F0EEED]">
-            Settings
+            Reports
           </h1>
           <p className="text-sm text-[#706C6B] dark:text-[#C1A7A3] mt-2">
-            Manage your account settings and preferences
+            View and analyze business reports and analytics
           </p>
         </div>
 
-        {/* Settings Content */}
+        {/* Reports Content */}
         <div className="space-y-6">
-          {/* Settings Sections */}
+          {/* Reports Sections */}
           <div className="bg-white dark:bg-[#2A2A2A] rounded-lg border border-[#E5E7EB] dark:border-[#404040] p-6">
             <h2 className="text-xl font-semibold text-[#191919] dark:text-[#F0EEED] mb-4">
-              Settings Sections
+              Reports Sections
             </h2>
             <div className="space-y-4">
               <div className="p-4 border border-[#E5E7EB] dark:border-[#404040] rounded-lg hover:bg-[#F9FAFB] dark:hover:bg-[#333333] transition-colors">
                 <h3 className="font-medium text-[#191919] dark:text-[#F0EEED] mb-1">
-                  Notification Settings
+                  Sales
                 </h3>
                 <p className="text-sm text-[#706C6B] dark:text-[#C1A7A3]">
-                  Configure your notification preferences
+                  View sales reports and analytics
                 </p>
                 <a
-                  href="/settings/notification"
+                  href="/reports/sales"
                   className="text-sm text-[#C1A7A3] hover:text-[#A8928E] mt-2 inline-block"
                 >
-                  Manage notifications →
+                  View sales reports →
                 </a>
               </div>
 
               <div className="p-4 border border-[#E5E7EB] dark:border-[#404040] rounded-lg hover:bg-[#F9FAFB] dark:hover:bg-[#333333] transition-colors">
                 <h3 className="font-medium text-[#191919] dark:text-[#F0EEED] mb-1">
-                  Account Settings
+                  Transaction
                 </h3>
                 <p className="text-sm text-[#706C6B] dark:text-[#C1A7A3]">
-                  Manage your account information and security
+                  View transaction history and details
                 </p>
                 <a
-                  href="/settings/account"
+                  href="/reports/transaction"
                   className="text-sm text-[#C1A7A3] hover:text-[#A8928E] mt-2 inline-block"
                 >
-                  Manage account →
+                  View transactions →
                 </a>
               </div>
 
               <div className="p-4 border border-[#E5E7EB] dark:border-[#404040] rounded-lg hover:bg-[#F9FAFB] dark:hover:bg-[#333333] transition-colors">
                 <h3 className="font-medium text-[#191919] dark:text-[#F0EEED] mb-1">
-                  Preferences
+                  Shift
                 </h3>
                 <p className="text-sm text-[#706C6B] dark:text-[#C1A7A3]">
-                  Customize your dashboard preferences and display options
+                  View shift reports and staff schedules
                 </p>
                 <a
-                  href="/settings/preferences"
+                  href="/reports/shift"
                   className="text-sm text-[#C1A7A3] hover:text-[#A8928E] mt-2 inline-block"
                 >
-                  Manage preferences →
+                  View shift reports →
                 </a>
               </div>
             </div>
-          </div>
-
-          {/* Quick Settings */}
-          <div className="bg-white dark:bg-[#2A2A2A] rounded-lg border border-[#E5E7EB] dark:border-[#404040] p-6">
-            <h2 className="text-xl font-semibold text-[#191919] dark:text-[#F0EEED] mb-4">
-              Quick Settings
-            </h2>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium text-[#191919] dark:text-[#F0EEED]">
-                    Dark Mode
-                  </h3>
-                  <p className="text-sm text-[#706C6B] dark:text-[#C1A7A3]">
-                    Toggle dark mode theme
-                  </p>
-                </div>
-                <button
-                  onClick={() => setIsDarkMode((prev) => !prev)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    isDarkMode ? "bg-[#C1A7A3]" : "bg-[#E5E7EB]"
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      isDarkMode ? "translate-x-6" : "translate-x-1"
-                    }`}
-                  />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Placeholder Message */}
-          <div className="bg-[#F9FAFB] dark:bg-[#1F1F1F] rounded-lg border border-[#E5E7EB] dark:border-[#404040] p-8 text-center">
-            <p className="text-[#706C6B] dark:text-[#C1A7A3]">
-              This is a placeholder settings page. More settings options will be added soon.
-            </p>
           </div>
         </div>
       </div>
     </SejenakDashboardLayout>
   );
 }
-
 
