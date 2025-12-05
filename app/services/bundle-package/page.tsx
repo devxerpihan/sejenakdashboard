@@ -36,6 +36,8 @@ export default function BundlePackagePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedBundle, setSelectedBundle] = useState<Bundle | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   // Fetch bundles from database
@@ -65,7 +67,6 @@ export default function BundlePackagePage() {
   }, [isDarkMode]);
 
   const locations = ["Islamic Village", "Location 2", "Location 3"];
-  const branches = ["Sejenak Islamic Village"];
 
   // Filter bundles
   const filteredBundles = allBundles.filter((bundle) => {
@@ -88,15 +89,22 @@ export default function BundlePackagePage() {
   }, [searchQuery]);
 
   const handleCreateBundle = () => {
+    setSelectedBundle(null);
     setCreateModalOpen(true);
+  };
+
+  const handleBundleClick = (bundle: Bundle) => {
+    setSelectedBundle(bundle);
+    setEditModalOpen(true);
   };
 
   const handleSaveBundle = async (bundleData: { 
     name: string; 
-    branch: string; 
+    branchIds?: string[];
     image?: string;
     treatments: string[];
     pricing: number;
+    status?: "active" | "inactive" | "disabled";
   }) => {
     try {
       // Fetch treatment names
@@ -108,44 +116,109 @@ export default function BundlePackagePage() {
       const treatmentNames = (treatmentsData || []).map((t: any) => t.name);
       const itemsString = treatmentNames.join(", ");
 
-      // Insert bundle package
-      const { data: bundleDataResult, error: insertError } = await supabase
-        .from("bundle_packages")
-        .insert({
-          name: bundleData.name,
-          branch: bundleData.branch,
-          image_url: bundleData.image || null,
-          items: itemsString,
-          pricing: bundleData.pricing,
-          status: "active",
-        })
-        .select()
-        .single();
-
-      if (insertError) throw insertError;
-
-      // Save bundle treatments relationship
-      if (bundleData.treatments.length > 0 && bundleDataResult) {
-        const bundleTreatments = bundleData.treatments.map((treatmentId) => ({
-          bundle_package_id: bundleDataResult.id,
-          treatment_id: treatmentId,
-        }));
-
-        const { error: bundleTreatmentsError } = await supabase
-          .from("bundle_treatments")
-          .insert(bundleTreatments);
-
-        if (bundleTreatmentsError) {
-          console.error("Error saving bundle treatments:", bundleTreatmentsError);
-          // Don't throw - bundle is created, treatments can be added later
+      // Map status: "disabled" -> "inactive" for database
+      const dbStatus = bundleData.status === "disabled" ? "inactive" : (bundleData.status || "active");
+      
+      // For now, use first branch or default branch name
+      // TODO: Update database schema to support multiple branches
+      // Fetch branch name from database if branchIds provided
+      let branchName = "Sejenak Islamic Village";
+      if (bundleData.branchIds && bundleData.branchIds.length > 0) {
+        const { data: branchData } = await supabase
+          .from("branches")
+          .select("name")
+          .eq("id", bundleData.branchIds[0])
+          .single();
+        if (branchData) {
+          branchName = branchData.name;
         }
       }
 
-      await refetch();
-      showToast("Bundle package created successfully!", "success");
+      if (selectedBundle) {
+        // Update existing bundle
+        const { error: updateError } = await supabase
+          .from("bundle_packages")
+          .update({
+            name: bundleData.name,
+            branch: branchName,
+            image_url: bundleData.image || null,
+            items: itemsString,
+            pricing: bundleData.pricing,
+            status: dbStatus,
+          })
+          .eq("id", selectedBundle.id);
+
+        if (updateError) throw updateError;
+
+        // Update bundle treatments relationship
+        // First, delete existing relationships
+        await supabase
+          .from("bundle_treatments")
+          .delete()
+          .eq("bundle_package_id", selectedBundle.id);
+
+        // Then, insert new relationships
+        if (bundleData.treatments.length > 0) {
+          const bundleTreatments = bundleData.treatments.map((treatmentId) => ({
+            bundle_package_id: selectedBundle.id,
+            treatment_id: treatmentId,
+          }));
+
+          const { error: bundleTreatmentsError } = await supabase
+            .from("bundle_treatments")
+            .insert(bundleTreatments);
+
+          if (bundleTreatmentsError) {
+            console.error("Error saving bundle treatments:", bundleTreatmentsError);
+          }
+        }
+
+        await refetch();
+        showToast("Bundle package updated successfully!", "success");
+      } else {
+        // Insert bundle package
+        const { data: bundleDataResult, error: insertError } = await supabase
+          .from("bundle_packages")
+          .insert({
+            name: bundleData.name,
+            branch: branchName,
+            image_url: bundleData.image || null,
+            items: itemsString,
+            pricing: bundleData.pricing,
+            status: dbStatus,
+          })
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+
+        // Save bundle treatments relationship
+        if (bundleData.treatments.length > 0 && bundleDataResult) {
+          const bundleTreatments = bundleData.treatments.map((treatmentId) => ({
+            bundle_package_id: bundleDataResult.id,
+            treatment_id: treatmentId,
+          }));
+
+          const { error: bundleTreatmentsError } = await supabase
+            .from("bundle_treatments")
+            .insert(bundleTreatments);
+
+          if (bundleTreatmentsError) {
+            console.error("Error saving bundle treatments:", bundleTreatmentsError);
+            // Don't throw - bundle is created, treatments can be added later
+          }
+        }
+
+        await refetch();
+        showToast("Bundle package created successfully!", "success");
+      }
+
+      setEditModalOpen(false);
+      setCreateModalOpen(false);
+      setSelectedBundle(null);
     } catch (err: any) {
-      console.error("Error creating bundle:", err);
-      showToast(`Failed to create bundle: ${err.message || "Unknown error"}`, "error");
+      console.error("Error saving bundle:", err);
+      showToast(`Failed to save bundle: ${err.message || "Unknown error"}`, "error");
       throw err;
     }
   };
@@ -264,7 +337,8 @@ export default function BundlePackagePage() {
             {paginatedBundles.length > 0 ? (
               <>
                 <BundleTable 
-                  bundles={paginatedBundles} 
+                  bundles={paginatedBundles}
+                  onBundleClick={handleBundleClick}
                   onDelete={handleDeleteBundle}
                 />
                 <Pagination
@@ -281,12 +355,16 @@ export default function BundlePackagePage() {
           </>
         )}
 
-        {/* Create Bundle Modal */}
+        {/* Create/Edit Bundle Modal */}
         <CreateBundleModal
-          isOpen={createModalOpen}
-          onClose={() => setCreateModalOpen(false)}
+          isOpen={createModalOpen || editModalOpen}
+          onClose={() => {
+            setCreateModalOpen(false);
+            setEditModalOpen(false);
+            setSelectedBundle(null);
+          }}
+          bundle={selectedBundle || undefined}
           onSave={handleSaveBundle}
-          branches={branches}
           onError={(message) => showToast(message, "error")}
         />
       </div>

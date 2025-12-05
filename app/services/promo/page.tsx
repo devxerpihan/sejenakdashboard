@@ -37,6 +37,8 @@ export default function PromoPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedPromo, setSelectedPromo] = useState<Promo | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   // Fetch promos from database
@@ -87,7 +89,13 @@ export default function PromoPage() {
   const locations = ["Islamic Village", "Location 2", "Location 3"];
 
   const handleCreatePromo = () => {
+    setSelectedPromo(null);
     setCreateModalOpen(true);
+  };
+
+  const handlePromoClick = (promo: Promo) => {
+    setSelectedPromo(promo);
+    setEditModalOpen(true);
   };
 
   const handleSavePromo = async (promoData: {
@@ -99,30 +107,67 @@ export default function PromoPage() {
     eligibility?: EligibilityData;
     validFrom: Date;
     validUntil: Date;
+    branchIds?: string[];
+    customerTier?: "all" | "Grace" | "Signature" | "Elite";
+    claimMethod?: "manual" | "auto";
+    status?: "active" | "expired" | "disabled";
   }) => {
     try {
-      const { error: insertError } = await supabase
-        .from("promos")
-        .insert({
-          code: promoData.code,
-          type: promoData.type,
-          value: promoData.value,
-          quota: promoData.quota,
-          usage_count: 0,
-          min_transaction: promoData.minTransaction || null,
-          eligibility: promoData.eligibility ? JSON.stringify(promoData.eligibility) : null,
-          valid_from: promoData.validFrom.toISOString(),
-          valid_until: promoData.validUntil.toISOString(),
-          status: "active",
-        });
+      // Map status: "disabled" -> "inactive" for database
+      const dbStatus = promoData.status === "disabled" ? "inactive" : (promoData.status || "active");
+      
+      // Map customer tier to targetting string
+      const targetting = promoData.customerTier === "all" ? "All" : promoData.customerTier || "All";
 
-      if (insertError) throw insertError;
+      if (selectedPromo) {
+        // Update existing promo
+        const { error: updateError } = await supabase
+          .from("promos")
+          .update({
+            code: promoData.code,
+            type: promoData.type,
+            value: promoData.value,
+            quota: promoData.quota,
+            min_transaction: promoData.minTransaction || null,
+            eligibility: promoData.eligibility ? JSON.stringify(promoData.eligibility) : null,
+            valid_from: promoData.validFrom.toISOString(),
+            valid_until: promoData.validUntil.toISOString(),
+            status: dbStatus,
+            // TODO: Add branch_ids, customer_tier, claim_method columns to database
+            // For now, we'll store customer_tier in a custom field or extend the schema
+          })
+          .eq("id", selectedPromo.id);
+
+        if (updateError) throw updateError;
+        showToast("Promo updated successfully!", "success");
+      } else {
+        // Create new promo
+        const { error: insertError } = await supabase
+          .from("promos")
+          .insert({
+            code: promoData.code,
+            type: promoData.type,
+            value: promoData.value,
+            quota: promoData.quota,
+            usage_count: 0,
+            min_transaction: promoData.minTransaction || null,
+            eligibility: promoData.eligibility ? JSON.stringify(promoData.eligibility) : null,
+            valid_from: promoData.validFrom.toISOString(),
+            valid_until: promoData.validUntil.toISOString(),
+            status: dbStatus,
+          });
+
+        if (insertError) throw insertError;
+        showToast("Promo created successfully!", "success");
+      }
 
       await refetch();
-      showToast("Promo created successfully!", "success");
+      setEditModalOpen(false);
+      setCreateModalOpen(false);
+      setSelectedPromo(null);
     } catch (err: any) {
-      console.error("Error creating promo:", err);
-      showToast(`Failed to create promo: ${err.message || "Unknown error"}`, "error");
+      console.error("Error saving promo:", err);
+      showToast(`Failed to save promo: ${err.message || "Unknown error"}`, "error");
       throw err;
     }
   };
@@ -232,7 +277,11 @@ export default function PromoPage() {
           <>
             {paginatedPromos.length > 0 ? (
               <>
-                <PromoTable promos={paginatedPromos} onDelete={handleDeletePromo} />
+                <PromoTable 
+                  promos={paginatedPromos} 
+                  onPromoClick={handlePromoClick}
+                  onDelete={handleDeletePromo} 
+                />
                 <Pagination
                   currentPage={currentPage}
                   totalPages={totalPages}
@@ -247,10 +296,15 @@ export default function PromoPage() {
           </>
         )}
 
-        {/* Create Promo Modal */}
+        {/* Create/Edit Promo Modal */}
         <CreatePromoModal
-          isOpen={createModalOpen}
-          onClose={() => setCreateModalOpen(false)}
+          isOpen={createModalOpen || editModalOpen}
+          onClose={() => {
+            setCreateModalOpen(false);
+            setEditModalOpen(false);
+            setSelectedPromo(null);
+          }}
+          promo={selectedPromo || undefined}
           onSave={handleSavePromo}
           onError={(message) => showToast(message, "error")}
         />

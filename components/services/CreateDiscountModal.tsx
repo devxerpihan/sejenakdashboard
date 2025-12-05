@@ -4,6 +4,9 @@ import React, { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { Discount } from "@/types/discount";
 import { EligibilitySelector, EligibilityData } from "./EligibilitySelector";
+import { useBranches } from "@/hooks/useBranches";
+import { Dropdown } from "@/components/ui/Dropdown";
+import { MultiSelectDropdown } from "@/components/ui/MultiSelectDropdown";
 
 interface CreateDiscountModalProps {
   isOpen: boolean;
@@ -16,6 +19,8 @@ interface CreateDiscountModalProps {
     eligibility?: EligibilityData;
     validFrom: Date;
     validUntil: Date;
+    branchIds?: string[];
+    status?: "active" | "expired" | "disabled";
   }) => void;
   onError?: (message: string) => void;
 }
@@ -34,7 +39,11 @@ export const CreateDiscountModal: React.FC<CreateDiscountModalProps> = ({
   const [eligibility, setEligibility] = useState<EligibilityData>({ type: "all" });
   const [validFrom, setValidFrom] = useState<string>("");
   const [validUntil, setValidUntil] = useState<string>("");
+  const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
+  const [status, setStatus] = useState<"active" | "expired" | "disabled">("active");
   const [saving, setSaving] = useState(false);
+
+  const { branches, loading: branchesLoading } = useBranches();
 
   // Parse discount data if in edit mode
   useEffect(() => {
@@ -86,6 +95,18 @@ export const CreateDiscountModal: React.FC<CreateDiscountModalProps> = ({
         
         setValidFrom(parseDate(discount.validPeriod.start));
         setValidUntil(parseDate(discount.validPeriod.end));
+        
+        // Map status
+        if (discount.status === "active") {
+          setStatus("active");
+        } else if (discount.status === "expired") {
+          setStatus("expired");
+        } else {
+          setStatus("disabled");
+        }
+        
+        // TODO: Load branch IDs from discount data when available
+        setSelectedBranches([]);
       } else {
         // Create mode - reset form
         setName("");
@@ -97,6 +118,8 @@ export const CreateDiscountModal: React.FC<CreateDiscountModalProps> = ({
         nextMonth.setMonth(nextMonth.getMonth() + 1);
         setValidFrom(today);
         setValidUntil(nextMonth.toISOString().split("T")[0]);
+        setSelectedBranches([]);
+        setStatus("active");
       }
       setSaving(false);
     }
@@ -161,6 +184,8 @@ export const CreateDiscountModal: React.FC<CreateDiscountModalProps> = ({
         eligibility: eligibility.type === "all" ? undefined : eligibility,
         validFrom: fromDate,
         validUntil: untilDate,
+        branchIds: selectedBranches.length > 0 ? selectedBranches : undefined,
+        status,
       });
       onClose();
     } catch (err: any) {
@@ -225,33 +250,34 @@ export const CreateDiscountModal: React.FC<CreateDiscountModalProps> = ({
                 />
               </div>
 
-              {/* Type */}
-              <div>
-                <label className="block text-sm font-medium text-[#191919] dark:text-[#F0EEED] mb-2">
-                  Type
-                </label>
-                <select
-                  value={type}
-                  onChange={(e) => setType(e.target.value as "nominal" | "percentage")}
-                  className="w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-[#191919] text-[#191919] dark:text-[#F0EEED] focus:outline-none focus:ring-2 focus:ring-[#C1A7A3] appearance-none cursor-pointer"
-                >
-                  <option value="percentage">Percentage (%)</option>
-                  <option value="nominal">Nominal (Rp)</option>
-                </select>
-              </div>
+              {/* Type and Value */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#191919] dark:text-[#F0EEED] mb-2">
+                    Type
+                  </label>
+                  <select
+                    value={type}
+                    onChange={(e) => setType(e.target.value as "nominal" | "percentage")}
+                    className="w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-[#191919] text-[#191919] dark:text-[#F0EEED] focus:outline-none focus:ring-2 focus:ring-[#C1A7A3] appearance-none cursor-pointer"
+                  >
+                    <option value="percentage">Percentage (%)</option>
+                    <option value="nominal">Nominal (Rp)</option>
+                  </select>
+                </div>
 
-              {/* Value */}
-              <div>
-                <label className="block text-sm font-medium text-[#191919] dark:text-[#F0EEED] mb-2">
-                  Value {type === "nominal" ? "(Rp)" : "(%)"}
-                </label>
-                <input
-                  type="text"
-                  placeholder={type === "nominal" ? "e.g. 200000" : "e.g. 20"}
-                  value={value}
-                  onChange={handleValueChange}
-                  className="w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-[#191919] text-[#191919] dark:text-[#F0EEED] placeholder-[#706C6B] focus:outline-none focus:ring-2 focus:ring-[#C1A7A3]"
-                />
+                <div>
+                  <label className="block text-sm font-medium text-[#191919] dark:text-[#F0EEED] mb-2">
+                    Value {type === "nominal" ? "(Rp)" : "(%)"}
+                  </label>
+                  <input
+                    type="text"
+                    placeholder={type === "nominal" ? "e.g. 200000" : "e.g. 20"}
+                    value={value}
+                    onChange={handleValueChange}
+                    className="w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-[#191919] text-[#191919] dark:text-[#F0EEED] placeholder-[#706C6B] focus:outline-none focus:ring-2 focus:ring-[#C1A7A3]"
+                  />
+                </div>
               </div>
 
               {/* Eligibility */}
@@ -293,6 +319,52 @@ export const CreateDiscountModal: React.FC<CreateDiscountModalProps> = ({
                       className="w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-[#191919] text-[#191919] dark:text-[#F0EEED] focus:outline-none focus:ring-2 focus:ring-[#C1A7A3]"
                     />
                   </div>
+                </div>
+              </div>
+
+              {/* Assign to Outlets and Status */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#191919] dark:text-[#F0EEED] mb-2">
+                    Assign to Outlets
+                  </label>
+                  {branchesLoading ? (
+                    <div className="px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-[#191919] text-sm text-[#706C6B] dark:text-[#C1A7A3]">
+                      Loading branches...
+                    </div>
+                  ) : branches.length === 0 ? (
+                    <div className="px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-[#191919] text-sm text-[#706C6B] dark:text-[#C1A7A3]">
+                      No branches available
+                    </div>
+                  ) : (
+                    <MultiSelectDropdown
+                      options={branches.map((branch) => ({
+                        value: branch.id,
+                        label: branch.name,
+                      }))}
+                      selectedValues={selectedBranches}
+                      onChange={setSelectedBranches}
+                      placeholder="Select outlets"
+                      className="w-full"
+                    />
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[#191919] dark:text-[#F0EEED] mb-2">
+                    Status
+                  </label>
+                  <Dropdown
+                    options={[
+                      { value: "active", label: "Active" },
+                      { value: "expired", label: "Expired" },
+                      { value: "disabled", label: "Disabled" },
+                    ]}
+                    value={status}
+                    onChange={(value) => setStatus(value as "active" | "expired" | "disabled")}
+                    placeholder="Select status"
+                    className="w-full"
+                  />
                 </div>
               </div>
             </div>

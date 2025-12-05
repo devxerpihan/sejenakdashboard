@@ -7,10 +7,11 @@ import { TrashIcon } from "@/components/icons";
 
 interface PromoTableProps {
   promos: Promo[];
+  onPromoClick?: (promo: Promo) => void;
   onDelete?: (promoId: string) => void;
 }
 
-export const PromoTable: React.FC<PromoTableProps> = ({ promos, onDelete }) => {
+export const PromoTable: React.FC<PromoTableProps> = ({ promos, onPromoClick, onDelete }) => {
   const formatValidPeriod = (start: string, end: string) => {
     return `${start} - ${end}`;
   };
@@ -57,7 +58,10 @@ export const PromoTable: React.FC<PromoTableProps> = ({ promos, onDelete }) => {
             {promos.map((promo) => (
               <tr
                 key={promo.id}
-                className="hover:bg-[#F0EEED] dark:hover:bg-[#3D3B3A] transition-colors"
+                className={`hover:bg-[#F0EEED] dark:hover:bg-[#3D3B3A] transition-colors ${
+                  onPromoClick ? "cursor-pointer" : ""
+                }`}
+                onClick={() => onPromoClick && onPromoClick(promo)}
               >
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-[#191919] dark:text-[#F0EEED]">

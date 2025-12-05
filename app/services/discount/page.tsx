@@ -106,8 +106,13 @@ export default function DiscountPage() {
     eligibility?: EligibilityData;
     validFrom: Date;
     validUntil: Date;
+    branchIds?: string[];
+    status?: "active" | "expired" | "disabled";
   }) => {
     try {
+      // Map status: "disabled" -> "inactive" for database
+      const dbStatus = discountData.status === "disabled" ? "inactive" : (discountData.status || "active");
+
       if (selectedDiscount) {
         // Update existing discount
         const { error: updateError } = await supabase
@@ -119,6 +124,8 @@ export default function DiscountPage() {
             eligibility: discountData.eligibility ? JSON.stringify(discountData.eligibility) : null,
             valid_from: discountData.validFrom.toISOString(),
             valid_until: discountData.validUntil.toISOString(),
+            status: dbStatus,
+            // TODO: Add branch_ids column to database
           })
           .eq("id", selectedDiscount.id);
 
@@ -135,7 +142,7 @@ export default function DiscountPage() {
             eligibility: discountData.eligibility ? JSON.stringify(discountData.eligibility) : null,
             valid_from: discountData.validFrom.toISOString(),
             valid_until: discountData.validUntil.toISOString(),
-            status: "active",
+            status: dbStatus,
           });
 
         if (insertError) throw insertError;

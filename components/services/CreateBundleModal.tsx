@@ -6,16 +6,22 @@ import { ImageUpload } from "./ImageUpload";
 import { useTreatments } from "@/hooks/useTreatments";
 import { Treatment } from "@/types/treatment";
 import { supabase } from "@/lib/supabase";
+import { Bundle } from "@/types/bundle";
+import { useBranches } from "@/hooks/useBranches";
+import { Dropdown } from "@/components/ui/Dropdown";
+import { MultiSelectDropdown } from "@/components/ui/MultiSelectDropdown";
 
 interface CreateBundleModalProps {
   isOpen: boolean;
   onClose: () => void;
+  bundle?: Bundle; // If provided, it's edit mode
   onSave: (bundle: { 
     name: string; 
-    branch: string; 
+    branchIds?: string[];
     image?: string;
     treatments: string[];
     pricing: number;
+    status?: "active" | "inactive" | "disabled";
   }) => void;
   branches?: string[];
   onError?: (message: string) => void;
@@ -24,35 +30,97 @@ interface CreateBundleModalProps {
 export const CreateBundleModal: React.FC<CreateBundleModalProps> = ({
   isOpen,
   onClose,
+  bundle,
   onSave,
   branches = ["Sejenak Islamic Village"],
   onError,
 }) => {
+  const isEditMode = !!bundle;
   const [bundleName, setBundleName] = useState("");
-  const [selectedBranch, setSelectedBranch] = useState(branches[0] || "");
+  const [selectedBranchIds, setSelectedBranchIds] = useState<string[]>([]);
   const [imageUrl, setImageUrl] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [selectedTreatments, setSelectedTreatments] = useState<Set<string>>(new Set());
   const [bundlePricing, setBundlePricing] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [status, setStatus] = useState<"active" | "inactive" | "disabled">("active");
   const [saving, setSaving] = useState(false);
 
-  // Fetch treatments
+  // Fetch treatments and branches
   const { treatments, loading: treatmentsLoading } = useTreatments();
+  const { branches: allBranches, loading: branchesLoading } = useBranches();
 
-  // Reset form when modal opens/closes
+  // Reset form when modal opens/closes or bundle changes
   useEffect(() => {
     if (isOpen) {
-      setBundleName("");
-      setSelectedBranch(branches[0] || "");
-      setImageUrl("");
-      setImageFile(null);
-      setSelectedTreatments(new Set());
-      setBundlePricing("");
-      setSearchQuery("");
+      if (bundle) {
+        // Edit mode - populate with existing data
+        setBundleName(bundle.name);
+        setImageUrl(bundle.image || "");
+        setImageFile(null);
+        
+        // Parse pricing
+        const pricingNum = typeof bundle.pricing === "number" 
+          ? bundle.pricing 
+          : parseFloat(bundle.pricing.toString().replace(/[^0-9]/g, "")) || 0;
+        setBundlePricing(pricingNum > 0 ? `Rp ${pricingNum.toLocaleString("id-ID")}` : "");
+        
+        // Map status
+        if (bundle.status === "active") {
+          setStatus("active");
+        } else if (bundle.status === "inactive") {
+          setStatus("inactive");
+        } else {
+          setStatus("disabled");
+        }
+        
+        // Load selected treatments from bundle_treatments table
+        const fetchBundleData = async () => {
+          try {
+            // Fetch treatments for this bundle
+            const { data: bundleTreatments } = await supabase
+              .from("bundle_treatments")
+              .select("treatment_id")
+              .eq("bundle_package_id", bundle.id);
+            
+            if (bundleTreatments) {
+              const treatmentIds = bundleTreatments.map((bt: any) => bt.treatment_id);
+              setSelectedTreatments(new Set(treatmentIds));
+            }
+            
+            // Fetch branch ID from branch name
+            if (bundle.branch) {
+              const { data: branchData } = await supabase
+                .from("branches")
+                .select("id")
+                .eq("name", bundle.branch)
+                .single();
+              
+              if (branchData) {
+                setSelectedBranchIds([branchData.id]);
+              }
+            }
+          } catch (err) {
+            console.error("Error loading bundle data:", err);
+          }
+        };
+        
+        fetchBundleData();
+        setSearchQuery("");
+      } else {
+        // Create mode - reset form
+        setBundleName("");
+        setSelectedBranchIds([]);
+        setImageUrl("");
+        setImageFile(null);
+        setSelectedTreatments(new Set());
+        setBundlePricing("");
+        setSearchQuery("");
+        setStatus("active");
+      }
       setSaving(false);
     }
-  }, [isOpen, branches]);
+  }, [isOpen, bundle]);
 
   const handleToggleTreatment = (treatmentId: string) => {
     setSelectedTreatments((prev) => {
@@ -81,15 +149,7 @@ export const CreateBundleModal: React.FC<CreateBundleModalProps> = ({
       return;
     }
 
-    if (!selectedBranch) {
-      const errorMessage = "Please select a branch";
-      if (onError) {
-        onError(errorMessage);
-      } else {
-        alert(errorMessage);
-      }
-      return;
-    }
+    // Branch selection is optional - can be empty for all branches
 
     if (selectedTreatments.size === 0) {
       const errorMessage = "Please select at least one treatment";
@@ -144,10 +204,11 @@ export const CreateBundleModal: React.FC<CreateBundleModalProps> = ({
 
       await onSave({
         name: bundleName.trim(),
-        branch: selectedBranch,
+        branchIds: selectedBranchIds.length > 0 ? selectedBranchIds : undefined,
         image: finalImageUrl,
         treatments: Array.from(selectedTreatments),
         pricing: numericPrice,
+        status,
       });
       onClose();
     } catch (err: any) {
@@ -184,7 +245,7 @@ export const CreateBundleModal: React.FC<CreateBundleModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-zinc-200 dark:border-zinc-800">
           <h2 className="text-xl font-bold text-[#191919] dark:text-[#F0EEED]">
-            Create Bundle Package
+            {isEditMode ? "Edit Bundle Package" : "Create Bundle Package"}
           </h2>
           <button
             onClick={onClose}
@@ -225,8 +286,8 @@ export const CreateBundleModal: React.FC<CreateBundleModalProps> = ({
               />
             </div>
 
-            {/* Name, Branch, and Pricing */}
-            <div className="grid grid-cols-3 gap-4">
+            {/* Name and Pricing */}
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-[#191919] dark:text-[#F0EEED] mb-2">
                   Name
@@ -240,23 +301,6 @@ export const CreateBundleModal: React.FC<CreateBundleModalProps> = ({
                   className="w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-[#191919] text-[#191919] dark:text-[#F0EEED] placeholder-[#706C6B] focus:outline-none focus:ring-2 focus:ring-[#C1A7A3]"
                   autoFocus
                 />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-[#191919] dark:text-[#F0EEED] mb-2">
-                  Branch
-                </label>
-                <select
-                  value={selectedBranch}
-                  onChange={(e) => setSelectedBranch(e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-[#191919] text-[#191919] dark:text-[#F0EEED] focus:outline-none focus:ring-2 focus:ring-[#C1A7A3] appearance-none cursor-pointer"
-                >
-                  {branches.map((branch) => (
-                    <option key={branch} value={branch}>
-                      {branch}
-                    </option>
-                  ))}
-                </select>
               </div>
 
               <div>
@@ -285,6 +329,52 @@ export const CreateBundleModal: React.FC<CreateBundleModalProps> = ({
                     }
                   }}
                   className="w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-[#191919] text-[#191919] dark:text-[#F0EEED] placeholder-[#706C6B] focus:outline-none focus:ring-2 focus:ring-[#C1A7A3]"
+                />
+              </div>
+            </div>
+
+            {/* Assign to Outlets and Status */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-[#191919] dark:text-[#F0EEED] mb-2">
+                  Assign to Outlets
+                </label>
+                {branchesLoading ? (
+                  <div className="px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-[#191919] text-sm text-[#706C6B] dark:text-[#C1A7A3]">
+                    Loading branches...
+                  </div>
+                ) : allBranches.length === 0 ? (
+                  <div className="px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-[#191919] text-sm text-[#706C6B] dark:text-[#C1A7A3]">
+                    No branches available
+                  </div>
+                ) : (
+                  <MultiSelectDropdown
+                    options={allBranches.map((branch) => ({
+                      value: branch.id,
+                      label: branch.name,
+                    }))}
+                    selectedValues={selectedBranchIds}
+                    onChange={setSelectedBranchIds}
+                    placeholder="Select outlets"
+                    className="w-full"
+                  />
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[#191919] dark:text-[#F0EEED] mb-2">
+                  Status
+                </label>
+                <Dropdown
+                  options={[
+                    { value: "active", label: "Active" },
+                    { value: "inactive", label: "Inactive" },
+                    { value: "disabled", label: "Disabled" },
+                  ]}
+                  value={status}
+                  onChange={(value) => setStatus(value as "active" | "inactive" | "disabled")}
+                  placeholder="Select status"
+                  className="w-full"
                 />
               </div>
             </div>
@@ -408,10 +498,10 @@ export const CreateBundleModal: React.FC<CreateBundleModalProps> = ({
           </button>
           <button
             onClick={handleSave}
-            disabled={saving || !bundleName.trim() || !selectedBranch || selectedTreatments.size === 0 || !bundlePricing || parseFloat(bundlePricing.replace(/[^0-9]/g, "")) <= 0}
+            disabled={saving || !bundleName.trim() || selectedTreatments.size === 0 || !bundlePricing || parseFloat(bundlePricing.replace(/[^0-9]/g, "")) <= 0}
             className="px-6 py-2 bg-[#C1A7A3] text-white rounded-lg hover:bg-[#A88F8B] transition-colors disabled:opacity-50 text-sm font-medium"
           >
-            {saving ? "Saving..." : "Save"}
+            {saving ? "Saving..." : isEditMode ? "Update" : "Save"}
           </button>
         </div>
       </div>
