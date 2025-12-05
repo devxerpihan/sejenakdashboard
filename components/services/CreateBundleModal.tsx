@@ -60,9 +60,7 @@ export const CreateBundleModal: React.FC<CreateBundleModalProps> = ({
         setImageFile(null);
         
         // Parse pricing
-        const pricingNum = typeof bundle.pricing === "number" 
-          ? bundle.pricing 
-          : parseFloat(bundle.pricing.toString().replace(/[^0-9]/g, "")) || 0;
+        const pricingNum = bundle.pricing || 0;
         setBundlePricing(pricingNum > 0 ? `Rp ${pricingNum.toLocaleString("id-ID")}` : "");
         
         // Map status
