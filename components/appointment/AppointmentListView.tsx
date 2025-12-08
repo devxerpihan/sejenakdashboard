@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Appointment } from "@/types/appointment";
 import { AppointmentStatusBadge } from "./AppointmentStatusBadge";
 import { Avatar } from "@/components/ui/Avatar";
@@ -15,6 +16,7 @@ export const AppointmentListView: React.FC<AppointmentListViewProps> = ({
   appointments,
   loading = false,
 }) => {
+  const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
   const totalPages = Math.ceil(appointments.length / itemsPerPage);
@@ -108,7 +110,8 @@ export const AppointmentListView: React.FC<AppointmentListViewProps> = ({
               return (
                 <tr
                   key={appointment.id}
-                  className="hover:bg-[#F0EEED] dark:hover:bg-[#3D3B3A] transition-colors"
+                  className="hover:bg-[#F0EEED] dark:hover:bg-[#3D3B3A] transition-colors cursor-pointer"
+                  onClick={() => router.push(`/appointment/${appointment.id}`)}
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-[#191919] dark:text-[#F0EEED]">

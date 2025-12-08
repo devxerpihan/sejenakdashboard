@@ -9,11 +9,11 @@ interface SejenakDashboardLayoutProps {
   children: React.ReactNode;
   navItems: NavItem[];
   headerTitle: string;
-  location: string;
-  locations: string[];
-  onLocationChange: (location: string) => void;
-  dateRange: { start: Date; end: Date };
-  onDateRangeChange: (direction: "prev" | "next") => void;
+  location?: string;
+  locations?: string[];
+  onLocationChange?: (location: string) => void;
+  dateRange?: { start: Date; end: Date };
+  onDateRangeChange?: (direction: "prev" | "next") => void;
   onPeriodChange?: (period: import("@/components/ui/DateRangePicker").PeriodType, start: Date, end: Date) => void;
   isDarkMode: boolean;
   onDarkModeToggle: () => void;
@@ -26,11 +26,11 @@ export const SejenakDashboardLayout: React.FC<SejenakDashboardLayoutProps> = ({
   children,
   navItems,
   headerTitle,
-  location,
-  locations,
-  onLocationChange,
-  dateRange,
-  onDateRangeChange,
+  location = "",
+  locations = [],
+  onLocationChange = () => {},
+  dateRange = { start: new Date(), end: new Date() },
+  onDateRangeChange = () => {},
   onPeriodChange,
   isDarkMode,
   onDarkModeToggle,
