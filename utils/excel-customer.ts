@@ -132,7 +132,7 @@ export const importCustomersFromExcel = async (file: File) => {
             const memberSince = parseDateFromExcel(row["Member Since"]);
 
             // Check if customer exists
-            let query = supabase.from("profiles").select("id");
+            let query = supabase.from("profiles").select("id, profile_data");
             
             if (email && phone) {
               query = query.or(`email.eq.${email},phone.eq.${phone}`);
