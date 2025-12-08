@@ -90,7 +90,7 @@ export function useAppointment(id: string) {
           { data: therapist },
           { data: customer },
           { data: review },
-          { data: bookingsCount } // For total visits
+          { count: bookingsCount, error: countError } // For total visits
         ] = await Promise.all([
           // Treatment
           booking.treatment_id 
@@ -118,7 +118,7 @@ export function useAppointment(id: string) {
           // Count customer bookings for total visits
           booking.user_id
              ? supabase.from("bookings").select("id", { count: "exact", head: true }).eq("user_id", booking.user_id)
-             : Promise.resolve({ data: null }),
+             : Promise.resolve({ count: null, error: null }),
         ]);
 
         // Process Data
@@ -183,7 +183,7 @@ export function useAppointment(id: string) {
           customerEmail: customer?.email || "-",
           customerPhone: customer?.phone || "-",
           membershipLevel: membershipLevel,
-          totalVisits: bookingsCount?.count || 0,
+          totalVisits: bookingsCount || 0,
           customerAvatar: customer?.avatar_url,
 
           // Review
