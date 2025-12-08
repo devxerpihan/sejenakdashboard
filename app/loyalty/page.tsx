@@ -164,6 +164,21 @@ export default function LoyaltyPage() {
                   Manage gift cards →
                 </a>
               </div>
+
+              <div className="p-4 border border-[#E5E7EB] dark:border-[#404040] rounded-lg hover:bg-[#F9FAFB] dark:hover:bg-[#333333] transition-colors">
+                <h3 className="font-medium text-[#191919] dark:text-[#F0EEED] mb-1">
+                  Special For You
+                </h3>
+                <p className="text-sm text-[#706C6B] dark:text-[#C1A7A3]">
+                  Manage featured offers and special content
+                </p>
+                <a
+                  href="/loyalty/special-for-you"
+                  className="text-sm text-[#C1A7A3] hover:text-[#A8928E] mt-2 inline-block"
+                >
+                  Manage special offers →
+                </a>
+              </div>
             </div>
           </div>
         </div>
@@ -171,6 +186,7 @@ export default function LoyaltyPage() {
     </SejenakDashboardLayout>
   );
 }
+
 
 
 

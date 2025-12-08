@@ -26,7 +26,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   const [isDragging, setIsDragging] = useState(false);
 
   const handleFileSelect = (file: File) => {
-    if (file && file.type.startsWith("image/")) {
+    if (file && (file.type.startsWith("image/") || file.type === "image/svg+xml")) {
       onImageChange(file);
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -84,7 +84,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept="image/*,image/svg+xml"
           onChange={handleFileChange}
           className="hidden"
         />
@@ -118,7 +118,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
               Click to upload image or drag and drop
             </p>
             <p className="mt-1 text-xs text-[#706C6B] dark:text-[#C1A7A3]">
-              PNG, JPG, GIF up to 10MB
+              PNG, JPG, SVG, GIF up to 10MB
             </p>
           </div>
         )}

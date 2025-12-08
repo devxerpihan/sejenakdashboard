@@ -9,7 +9,7 @@ interface EditMembershipModalProps {
   isOpen: boolean;
   onClose: () => void;
   membership: Membership;
-  onSave: (updatedMembership: Membership) => void;
+  onSave: (updatedMembership: Membership) => Promise<void> | void;
 }
 
 export const EditMembershipModal: React.FC<EditMembershipModalProps> = ({
@@ -93,7 +93,7 @@ export const EditMembershipModal: React.FC<EditMembershipModalProps> = ({
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     // Convert spending back to points (remove dots, divide by 1000)
     const spendingValue = parseInt(formData.spending.replace(/\./g, "")) || 0;
     const minPoints = Math.floor(spendingValue / 1000);
@@ -104,20 +104,20 @@ export const EditMembershipModal: React.FC<EditMembershipModalProps> = ({
       multiplier: parseFloat(formData.multiplier),
       expiry: `${formData.expiry} month`,
       autoReward: formData.autoReward,
-      cashback: parseInt(formData.cashback),
+      cashback: parseFloat(formData.cashback), // Changed to parseFloat for decimal support
       stampProgram: formData.stampProgram,
       doubleStampWeekday: formData.doubleStampWeekday,
       doubleStampEvent: formData.doubleStampEvent,
       priorityBooking: formData.priorityBooking,
       freeRewards: formData.freeRewards,
-      upgradeRequirement: formData.upgradeRequirement ? parseFloat(formData.upgradeRequirement) * 1000000 : undefined,
-      maintainRequirement: formData.maintainRequirement ? parseFloat(formData.maintainRequirement) * 1000000 : undefined,
+      upgradeRequirement: formData.upgradeRequirement ? parseFloat(formData.upgradeRequirement) * 1000000 : null, // Handle empty string/null
+      maintainRequirement: formData.maintainRequirement ? parseFloat(formData.maintainRequirement) * 1000000 : null, // Handle empty string/null
       description: formData.description,
       customerProfile: formData.customerProfile,
     };
 
-    onSave(updatedMembership);
-    onClose();
+    await onSave(updatedMembership);
+    // Note: onClose is handled by parent after successful save
   };
 
   const multiplierOptions = [

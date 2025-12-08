@@ -47,6 +47,7 @@ const allNavItems: NavItem[] = [
       { label: "Reward", href: "/loyalty/reward", icon: <LoyaltyIcon /> },
       { label: "Stamp", href: "/loyalty/stamp", icon: <LoyaltyIcon /> },
       { label: "Gift Card", href: "/loyalty/gift-card", icon: <LoyaltyIcon /> },
+      { label: "Special For You", href: "/loyalty/special-for-you", icon: <LoyaltyIcon /> },
     ],
   },
   { label: "Staff", href: "/staff", icon: <StaffIcon /> },

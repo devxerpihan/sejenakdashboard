@@ -6,6 +6,7 @@ import { Footer } from "@/components/layout";
 import { Breadcrumbs, MembershipTable, EditMembershipModal, MembershipBenefits } from "@/components/services";
 import { navItems } from "@/config/navigation";
 import { Membership } from "@/types/membership";
+import { useMemberships } from "@/hooks/useMemberships";
 
 export default function MembershipPage() {
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -33,64 +34,8 @@ export default function MembershipPage() {
     }
   }, [isDarkMode]);
 
-  // Sample memberships data based on the new tier system from loyalty and rewards.md
-  const memberships: Membership[] = [
-    {
-      id: "1",
-      tier: "Grace",
-      minPoints: 0,
-      multiplier: 1.0,
-      expiry: "12 month",
-      autoReward: "Free Herbal Tea",
-      cashback: 3,
-      stampProgram: true,
-      doubleStampWeekday: false,
-      doubleStampEvent: false,
-      priorityBooking: false,
-      freeRewards: ["Free Herbal Tea setiap kunjungan"],
-      upgradeRequirement: 3000000, // Rp3,000,000
-      description: "Untuk kamu yang mulai memberi ruang bagi diri sendiri. Simbol awal perjalanan lembut menuju ketenangan.",
-      customerProfile: "Biasanya 1–2x/bulan",
-      color: "#F5F5DC", // Soft beige / Ivory
-    },
-    {
-      id: "2",
-      tier: "Signature",
-      minPoints: 3000, // Rp3,000,000 spending = 3000 points (1 point = Rp1,000)
-      multiplier: 1.25,
-      expiry: "12 month",
-      autoReward: "Free Sejenak Quick Hairwash",
-      cashback: 4,
-      stampProgram: true,
-      doubleStampWeekday: false,
-      doubleStampEvent: true, // Midweek Calm
-      priorityBooking: false,
-      freeRewards: ["Free Sejenak Quick Hairwash 1x"],
-      upgradeRequirement: 7500000, // Rp7,500,000
-      description: "Untuk kamu yang sudah menjadikan self-care sebagai bagian dari rutinitas. Menemukan keseimbangan di tengah kesibukan.",
-      customerProfile: "Rutin 2–3x/bulan",
-      color: "#FFB6C1", // Blush rose
-    },
-    {
-      id: "3",
-      tier: "Elite",
-      minPoints: 7500, // Rp7,500,000 spending = 7500 points
-      multiplier: 1.5,
-      expiry: "12 month",
-      autoReward: "Exclusive Elite Ritual Box",
-      cashback: 5,
-      stampProgram: true,
-      doubleStampWeekday: true, // Double stamp for weekday visits
-      doubleStampEvent: true,
-      priorityBooking: true,
-      freeRewards: ["Exclusive Elite Ritual Box", "Free Sejenak Ultimate Hydration Pedicure"],
-      maintainRequirement: 12000000, // Rp12,000,000
-      description: "Untuk kamu yang hidup dalam ritme tenang, penuh keseimbangan. Ketenangan telah menjadi gaya hidupmu.",
-      customerProfile: "Rutin tiap minggu",
-      color: "#F7E7CE", // Champagne gold
-    },
-  ];
-
+  const { memberships, loading, updateMembership, fetchMemberships } = useMemberships();
+  
   const locations = ["Islamic Village", "Location 2", "Location 3"];
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -101,13 +46,16 @@ export default function MembershipPage() {
     setIsEditModalOpen(true);
   };
 
-  const handleSaveMembership = (updatedMembership: Membership) => {
-    // Update the membership in the local state
-    // In a real app, this would update the database
-    console.log("Updated membership:", updatedMembership);
-    // TODO: Implement database update
-    setIsEditModalOpen(false);
-    setEditingMembership(null);
+  const handleSaveMembership = async (updatedMembership: Membership) => {
+    const { id, ...updates } = updatedMembership;
+    const result = await updateMembership(id, updates);
+    if (result.success) {
+      setIsEditModalOpen(false);
+      setEditingMembership(null);
+    } else {
+      // Handle error (could add a toast notification here)
+      console.error("Failed to update membership");
+    }
   };
 
   return (
@@ -142,18 +90,26 @@ export default function MembershipPage() {
           Membership
         </h1>
 
-        {/* Membership Benefits Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          {memberships.map((membership) => (
-            <MembershipBenefits key={membership.id} membership={membership} />
-          ))}
-        </div>
+        {loading ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#C1A7A3]"></div>
+          </div>
+        ) : (
+          <>
+            {/* Membership Benefits Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              {memberships.map((membership) => (
+                <MembershipBenefits key={membership.id} membership={membership} />
+              ))}
+            </div>
 
-        {/* Membership Table */}
-        <MembershipTable
-          memberships={memberships}
-          onActionClick={handleMembershipAction}
-        />
+            {/* Membership Table */}
+            <MembershipTable
+              memberships={memberships}
+              onActionClick={handleMembershipAction}
+            />
+          </>
+        )}
 
         {/* Edit Membership Modal */}
         {editingMembership && (
@@ -171,4 +127,5 @@ export default function MembershipPage() {
     </SejenakDashboardLayout>
   );
 }
+
 
