@@ -20,6 +20,8 @@ import { Treatment } from "@/types/treatment";
 import { TreatmentForm, TreatmentFormRef } from "@/components/services/TreatmentForm";
 import { supabase } from "@/lib/supabase";
 import { ToastContainer } from "@/components/ui/Toast";
+import { exportTreatmentsToExcel, parseTreatmentsFromExcel } from "@/lib/excel-treatment";
+import { PricingVariant } from "@/types/treatment";
 
 export default function TreatmentPage() {
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -42,7 +44,9 @@ export default function TreatmentPage() {
   const [viewMode, setViewMode] = useState<"list" | "edit">("list");
   const [selectedTreatment, setSelectedTreatment] = useState<Treatment | null>(null);
   const treatmentFormRef = useRef<TreatmentFormRef>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
 
   // Fetch treatments from database
   const { treatments: allTreatments, loading, error, refetch } = useTreatments();
@@ -105,6 +109,148 @@ export default function TreatmentPage() {
   }, [selectedCategory, searchQuery]);
 
   const locations = ["Islamic Village", "Location 2", "Location 3"];
+
+  const handleExport = async () => {
+    try {
+      showToast("Preparing export...", "info");
+      
+      // Fetch all variants to include in export
+      const { data: allVariants, error: variantsError } = await supabase
+        .from("treatment_pricing_variants")
+        .select("*");
+
+      if (variantsError) throw variantsError;
+
+      // Map variants to treatments
+      const treatmentsWithVariants = allTreatments.map(treatment => {
+        const treatmentVariants = allVariants
+          .filter((v: any) => v.treatment_id === treatment.id)
+          .map((v: any) => ({
+            id: v.id,
+            name: v.name,
+            weekday: v.weekday_price || 0,
+            weekend: v.weekend_price || 0,
+            holiday: v.holiday_price || 0,
+            weekdayEnabled: v.weekday_enabled,
+            weekendEnabled: v.weekend_enabled,
+            holidayEnabled: v.holiday_enabled,
+          }));
+
+        return {
+          ...treatment,
+          pricingVariants: treatmentVariants.length > 0 ? treatmentVariants : undefined
+        };
+      });
+
+      exportTreatmentsToExcel(treatmentsWithVariants);
+      showToast("Export completed successfully!", "success");
+    } catch (error: any) {
+      console.error("Export failed:", error);
+      showToast("Export failed: " + error.message, "error");
+    }
+  };
+
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsImporting(true);
+      showToast("Reading file...", "info");
+      
+      const importedTreatmentsMap = await parseTreatmentsFromExcel(file);
+      
+      let processedCount = 0;
+      let errorCount = 0;
+
+      showToast(`Processing ${importedTreatmentsMap.size} treatments...`, "info");
+
+      for (const [serviceName, data] of importedTreatmentsMap.entries()) {
+        try {
+          // Check if treatment exists
+          const existingTreatment = allTreatments.find(
+            t => t.name.toLowerCase() === serviceName.toLowerCase()
+          );
+
+          let treatmentId = existingTreatment?.id;
+
+          if (existingTreatment) {
+            // Update existing treatment
+            const { error: updateError } = await supabase
+              .from("treatments")
+              .update({
+                category: data.category,
+                duration: data.duration, // Update duration if present/changed
+                // We don't update price here as it might be derived or handled differently
+              })
+              .eq("id", treatmentId);
+
+            if (updateError) throw updateError;
+
+            // Delete existing variants
+            await supabase
+              .from("treatment_pricing_variants")
+              .delete()
+              .eq("treatment_id", treatmentId);
+          } else {
+            // Create new treatment
+            const { data: newTreatment, error: createError } = await supabase
+              .from("treatments")
+              .insert({
+                name: serviceName,
+                category: data.category,
+                duration: data.duration || 60,
+                is_active: true,
+                price: 0, // Default price, will be handled by variants
+              })
+              .select()
+              .single();
+
+            if (createError) throw createError;
+            treatmentId = newTreatment.id;
+          }
+
+          // Insert new variants
+          if (data.variants.length > 0 && treatmentId) {
+            const variantsToInsert = data.variants.map(v => ({
+              treatment_id: treatmentId,
+              name: v.name,
+              weekday_price: v.weekdayEnabled ? v.weekday : null,
+              weekend_price: v.weekendEnabled ? v.weekend : null,
+              holiday_price: v.holidayEnabled ? v.holiday : null,
+              weekday_enabled: v.weekdayEnabled,
+              weekend_enabled: v.weekendEnabled,
+              holiday_enabled: v.holidayEnabled,
+            }));
+
+            const { error: variantError } = await supabase
+              .from("treatment_pricing_variants")
+              .insert(variantsToInsert);
+
+            if (variantError) throw variantError;
+          }
+
+          processedCount++;
+        } catch (err) {
+          console.error(`Error processing treatment ${serviceName}:`, err);
+          errorCount++;
+        }
+      }
+
+      await refetch();
+      showToast(`Import completed. Processed: ${processedCount}, Errors: ${errorCount}`, errorCount > 0 ? "warning" : "success");
+      
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    } catch (error: any) {
+      console.error("Import failed:", error);
+      showToast("Import failed: " + error.message, "error");
+    } finally {
+      setIsImporting(false);
+    }
+  };
 
   const handleCreateTreatment = () => {
     setIsCreateModalOpen(true);
@@ -793,9 +939,16 @@ export default function TreatmentPage() {
               title="Treatment"
               actionButtons={[
                 {
-                  label: "Export / Import",
-                  onClick: () => console.log("Export / Import"),
-                  variant: "primary",
+                  label: "Export",
+                  onClick: handleExport,
+                  variant: "outline",
+                  icon: <span className="text-lg">↓</span>,
+                },
+                {
+                  label: isImporting ? "Importing..." : "Import",
+                  onClick: () => !isImporting && fileInputRef.current?.click(),
+                  variant: "outline",
+                  icon: <span className="text-lg">↑</span>,
                 },
                 {
                   label: "Create Treatment",
@@ -804,6 +957,13 @@ export default function TreatmentPage() {
                   icon: <PlusIcon />,
                 },
               ]}
+            />
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleImport}
+              accept=".xlsx, .xls"
+              className="hidden"
             />
 
             {/* Filters */}
