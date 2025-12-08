@@ -265,7 +265,7 @@ export default function AppointmentDetailsPage() {
                 <div className="grid grid-cols-3 gap-4 items-center">
                   <span className="text-sm text-[#706C6B] dark:text-[#C1A7A3]">Status Booking</span>
                   <div className="col-span-2">
-                    <AppointmentStatusBadge status={appointment.status} />
+                    {appointment.status && <AppointmentStatusBadge status={appointment.status} />}
                   </div>
                 </div>
               </div>
