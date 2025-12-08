@@ -19,6 +19,7 @@ interface EditProfileModalProps {
     registeredDate: string;
     memberStatus: string;
     role?: string;
+    notes?: string;
   };
   onSave: () => void;
 }
@@ -38,6 +39,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     city: customer.city,
     memberStatus: customer.memberStatus,
     role: customer.role || "customer",
+    notes: customer.notes || "",
   });
   const [saving, setSaving] = useState(false);
 
@@ -52,6 +54,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
         city: customer.city,
         memberStatus: customer.memberStatus,
         role: customer.role || "customer",
+        notes: customer.notes || "",
       });
     }
   }, [isOpen, customer]);
@@ -80,6 +83,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
         phone: phoneNumber,
         address: formData.address,
         role: formData.role,
+        notes: formData.notes,
       };
 
       if (formattedBirthDate) {
@@ -294,6 +298,20 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                 value={formData.role}
                 onChange={(value) => handleChange("role", value)}
                 placeholder="Select role"
+              />
+            </div>
+
+            {/* Notes */}
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-[#706C6B] dark:text-[#C1A7A3] mb-2">
+                Notes
+              </label>
+              <textarea
+                value={formData.notes}
+                onChange={(e) => handleChange("notes", e.target.value)}
+                rows={3}
+                className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-[#191919] text-[#191919] dark:text-[#F0EEED] focus:outline-none focus:ring-2 focus:ring-[#C1A7A3]"
+                placeholder="Add notes about the customer..."
               />
             </div>
           </div>

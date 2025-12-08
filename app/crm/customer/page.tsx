@@ -18,6 +18,7 @@ import { Customer, CustomerStatus } from "@/types/customer";
 import { useCustomers } from "@/hooks/useCustomers";
 import { EditProfileModal } from "@/components/crm/EditProfileModal";
 import { supabase } from "@/lib/supabase";
+import { exportCustomersToExcel, importCustomersFromExcel } from "@/utils/excel-customer";
 
 export default function CustomerPage() {
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -42,6 +43,7 @@ export default function CustomerPage() {
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [editingCustomerDetails, setEditingCustomerDetails] = useState<any>(null);
   const [loadingCustomerDetails, setLoadingCustomerDetails] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   // Fetch customers from database
@@ -99,9 +101,47 @@ export default function CustomerPage() {
   const locations = ["Islamic Village", "Location 2", "Location 3"];
   const memberLevels = ["All", "Grace", "Signature", "Elite"];
 
-  const handleExportImport = () => {
-    console.log("Export / Import");
-    // TODO: Implement export/import functionality
+  const handleExport = async () => {
+    try {
+      const result = await exportCustomersToExcel();
+      if (result.success) {
+        alert(`Successfully exported ${result.count} customers.`);
+      } else {
+        alert(`Export failed: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("Export error:", error);
+      alert("An unexpected error occurred during export.");
+    }
+  };
+
+  const handleImportClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const result = await importCustomersFromExcel(file);
+      if (result.success) {
+        alert(`Successfully processed. ${result.count} customers updated/inserted.`);
+        refetch(); // Refresh list
+      } else {
+        alert(`Import failed: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("Import error:", error);
+      alert("An unexpected error occurred during import.");
+    } finally {
+      // Reset input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
   };
 
   const handleCustomerClick = (customer: Customer) => {
@@ -168,6 +208,7 @@ export default function CustomerPage() {
           registeredDate: formatDate(profile.created_at),
           memberStatus: "Active",
           role: profile.role || "customer",
+          notes: profile.notes || "",
         });
         setEditingCustomer(customer);
         setIsEditModalOpen(true);
@@ -222,11 +263,25 @@ export default function CustomerPage() {
           title="Customer"
           actionButtons={[
             {
-              label: "Export / Import",
-              onClick: handleExportImport,
+              label: "Export Excel",
+              onClick: handleExport,
+              variant: "secondary",
+            },
+            {
+              label: "Import Excel",
+              onClick: handleImportClick,
               variant: "primary",
             },
           ]}
+        />
+        
+        {/* Hidden File Input */}
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          className="hidden"
+          accept=".xlsx,.xls"
         />
 
         {/* Status Filter Tabs */}
