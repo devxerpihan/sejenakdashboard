@@ -51,6 +51,7 @@ export async function POST(req: NextRequest) {
     // "promo" -> "promotionalOffers"
     
     let prefKey = "promotionalOffers"; // default
+    
     if (type === "booking_reminder") prefKey = "bookingReminders";
     if (type === "treatment_update") prefKey = "treatmentUpdates";
 
