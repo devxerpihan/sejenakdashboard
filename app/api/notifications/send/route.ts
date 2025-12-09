@@ -8,6 +8,8 @@ export async function POST(req: NextRequest) {
   try {
     const { title, message, targetType, targetValue, type } = await req.json();
 
+    console.log(`Sending notification: Type=${type}, Target=${targetType}`);
+
     if (!title || !message || !targetType) {
       return NextResponse.json(
         { error: "Missing required fields" },
@@ -18,9 +20,10 @@ export async function POST(req: NextRequest) {
     const supabase = getSupabaseAdmin();
 
     // 1. Fetch Tokens based on target
+    // We fetch BOTH preferences and notification_settings to be robust
     let query: any = supabase
       .from("profiles")
-      .select("id, fcm_token, role, preferences")
+      .select("id, fcm_token, role, preferences, notification_settings")
       .not("fcm_token", "is", null);
 
     if (targetType === "role") {
@@ -31,11 +34,10 @@ export async function POST(req: NextRequest) {
       // Join member_points to filter by tier
       query = supabase
         .from("profiles")
-        .select("id, fcm_token, role, preferences, member_points!inner(tier)")
+        .select("id, fcm_token, role, preferences, notification_settings, member_points!inner(tier)")
         .eq("member_points.tier", targetValue)
         .not("fcm_token", "is", null);
     }
-    // if targetType === 'all', no filter needed (fetch all with tokens)
 
     const { data: profiles, error } = await query;
 
@@ -55,20 +57,37 @@ export async function POST(req: NextRequest) {
     if (type === "booking_reminder") prefKey = "bookingReminders";
     if (type === "treatment_update") prefKey = "treatmentUpdates";
 
+    console.log(`Filter Key: ${prefKey}`);
+
     // Filter valid profiles:
     // 1. Must have token
-    // 2. Preferences must NOT be explicitly false (default true if undefined)
+    // 2. Preferences must NOT be explicitly false
     const validProfiles = profiles?.filter((p: any) => {
         if (!Expo.isExpoPushToken(p.fcm_token)) return false;
         
-        // Check preferences
-        const prefs = p.preferences || {};
-        // If preference is explicitly set to false, skip. undefined/null implies true/opt-in by default
-        if (prefs[prefKey] === false) return false;
+        // Merge preferences: notification_settings takes precedence over preferences
+        const mergedPrefs = { 
+            ...(p.preferences || {}), 
+            ...(p.notification_settings || {}) 
+        };
+        
+        const val = mergedPrefs[prefKey];
+
+        // Debug logging to verify values
+        console.log(`User ${p.id} merged prefs:`, JSON.stringify(mergedPrefs));
+        console.log(`Checking key '${prefKey}': value is ${val} (type: ${typeof val})`);
+
+        // If preference is explicitly set to false (boolean or string), skip. 
+        if (val === false || val === "false") {
+            console.log(`User ${p.id} filtered out due to preferences.`);
+            return false;
+        }
         
         return true;
     }) || [];
     
+    console.log(`Profiles found: ${profiles?.length || 0}, Valid after filter: ${validProfiles.length}`);
+
     // 2. Prepare Expo Messages
     const messages: ExpoPushMessage[] = [];
     const tickets = [];
@@ -103,20 +122,9 @@ export async function POST(req: NextRequest) {
     }
 
     // 4. Save Notification to Database (for in-app history)
-    // We only save for people we actually sent to (validProfiles)
-    // Actually, for broadcast logs, we might want to log who received it.
-    // The previous implementation bulk inserted based on targetType logic blindly.
-    // Now that we filter by preferences, we should ideally only insert for validProfiles.
-    
-    // HOWEVER, "notifications" table is usually "in-app notification center".
-    // If a user disables PUSH, do they also want to disable IN-APP?
-    // Usually NO. Push preference controls the phone popup. In-app usually receives all unless specific setting.
-    // The prompt says "gated by the user preferences", usually referring to the intrusive channels (push/email).
-    // Let's assume for now this gates BOTH to be safe and respect "I don't want promo" fully.
-    
     const notificationRecords = validProfiles.map((p: any) => ({
         recipient_id: p.id,
-        recipient_role: null, // We link to specific ID now since we filtered list
+        recipient_role: null,
         title,
         message,
         type: type || "broadcast",

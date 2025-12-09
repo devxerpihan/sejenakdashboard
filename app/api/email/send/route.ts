@@ -28,7 +28,6 @@ export async function POST(req: NextRequest) {
     let senderEmail = providedSenderEmail;
 
     // Fetch from DB if not provided or to confirm defaults
-    // We fetch both key and sender_email in parallel if needed
     if (!apiKey || !senderEmail) {
         const { data: settings, error: settingsError } = await supabase
             .from("app_settings")
@@ -62,10 +61,11 @@ export async function POST(req: NextRequest) {
     let profiles;
     let error;
 
+    // We fetch BOTH preferences and notification_settings to be robust
     if (targetType === "tier") {
       const result = await supabase
         .from("profiles")
-        .select("email, role, preferences, member_points!inner(tier)")
+        .select("email, role, preferences, notification_settings, member_points!inner(tier)")
         .eq("member_points.tier", targetValue)
         .not("email", "is", null);
       
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
     } else {
       let query = supabase
         .from("profiles")
-        .select("email, role, preferences")
+        .select("email, role, preferences, notification_settings")
         .not("email", "is", null);
 
       if (targetType === "role") {
@@ -106,10 +106,15 @@ export async function POST(req: NextRequest) {
     const validProfiles = profiles?.filter((p: any) => {
         if (!p.email || !p.email.includes("@")) return false;
         
-        // Check preferences
-        const prefs = p.preferences || {};
-        // If preference is explicitly set to false, skip. undefined/null implies true/opt-in by default
-        if (prefs[prefKey] === false) return false;
+        // Merge preferences: notification_settings takes precedence over preferences
+        const mergedPrefs = { 
+            ...(p.preferences || {}), 
+            ...(p.notification_settings || {}) 
+        };
+        const val = mergedPrefs[prefKey];
+
+        // If preference is explicitly set to false, skip.
+        if (val === false || val === "false") return false;
         
         return true;
     }) || [];
