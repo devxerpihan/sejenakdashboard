@@ -131,3 +131,4 @@ export const PointRulesTable: React.FC<PointRulesTableProps> = ({
 
 
 
+

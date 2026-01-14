@@ -25,7 +25,84 @@ import {
   WhatsAppIcon,
 } from "@/components/icons";
 
+const ComingSoon = ({ onAuthorized }: { onAuthorized: () => void }) => {
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password === "sejenakxerpihan") {
+      localStorage.setItem("root_access", "true");
+      onAuthorized();
+    } else {
+      setError("Incorrect password");
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-[#F0EEED] dark:bg-[#191919] px-6">
+      <div className="max-w-md w-full text-center space-y-8">
+        <div className="flex justify-center">
+          <img 
+            src="/images/Logo Baru Sejenak-03.png" 
+            alt="Sejenak Logo"
+            className="h-32 w-auto animate-pulse"
+          />
+        </div>
+        
+        <div className="space-y-4">
+          <h1 className="text-4xl md:text-5xl font-bold text-[#191919] dark:text-[#F0EEED] tracking-tight">
+            Something Beautiful is <span className="text-[#C1A7A3]">Coming</span>
+          </h1>
+          <p className="text-lg text-[#706C6B] dark:text-[#C1A7A3] max-w-sm mx-auto">
+            Our new digital experience is currently under construction. Please enter the password to preview.
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4 bg-white dark:bg-[#3D3B3A] p-8 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-800">
+          <div className="space-y-2 text-left">
+            <label className="text-sm font-medium text-[#706C6B] dark:text-[#C1A7A3]">
+              Private Access Key
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (error) setError("");
+              }}
+              placeholder="••••••••••••"
+              className="w-full px-4 py-3 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-[#F0EEED] dark:bg-[#191919] text-[#191919] dark:text-[#F0EEED] focus:outline-none focus:ring-2 focus:ring-[#C1A7A3] transition-all"
+            />
+          </div>
+          
+          {error && (
+            <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm p-3 rounded-lg">
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            className="w-full py-4 bg-[#C1A7A3] hover:bg-[#A88F8B] text-white rounded-lg font-bold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 uppercase tracking-widest"
+          >
+            Launch Preview
+          </button>
+        </form>
+
+        <div className="pt-8 border-t border-zinc-200 dark:border-zinc-800">
+          <p className="text-sm text-[#706C6B] dark:text-[#C1A7A3]">
+            © 2025 Sejenak Beauty Lounge. All rights reserved.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function Home() {
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("darkMode");
@@ -33,6 +110,16 @@ export default function Home() {
     }
     return false;
   });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const auth = localStorage.getItem("root_access");
+      if (auth === "true") {
+        setIsAuthorized(true);
+      }
+      setIsCheckingAuth(false);
+    }
+  }, []);
 
   const [isScrolled, setIsScrolled] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -169,6 +256,24 @@ export default function Home() {
       icon: PersonalizedIcon,
     },
   ];
+
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen bg-[#F0EEED] dark:bg-[#191919] flex items-center justify-center">
+        <div className="animate-pulse">
+          <img 
+            src="/images/Logo Baru Sejenak-03.png" 
+            alt="Sejenak Logo"
+            className="h-24 w-auto opacity-50"
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthorized) {
+    return <ComingSoon onAuthorized={() => setIsAuthorized(true)} />;
+  }
 
   return (
     <div className="min-h-screen bg-[#F0EEED] dark:bg-[#191919]">
