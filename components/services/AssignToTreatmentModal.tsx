@@ -138,15 +138,19 @@ export const AssignToTreatmentModal: React.FC<AssignToTreatmentModalProps> = ({
     try {
       setSaving(true);
 
-      // Update all selected treatments to have this category
-      const updates = Array.from(selectedTreatments).map((treatmentId) =>
-        supabase
+      const selectedIds = Array.from(selectedTreatments);
+
+      // 1. Update all selected treatments to have this category
+      if (selectedIds.length > 0) {
+        const { error: updateError } = await supabase
           .from("treatments")
           .update({ category: categoryName })
-          .eq("id", treatmentId)
-      );
+          .in("id", selectedIds);
+        
+        if (updateError) throw updateError;
+      }
 
-      // Remove category from unselected treatments that had this category
+      // 2. Remove category from unselected treatments that had this category
       const unselectedTreatments = treatments
         .filter(
           (t) =>
@@ -154,14 +158,14 @@ export const AssignToTreatmentModal: React.FC<AssignToTreatmentModalProps> = ({
         )
         .map((t) => t.id);
 
-      const removals = unselectedTreatments.map((treatmentId) =>
-        supabase
+      if (unselectedTreatments.length > 0) {
+        const { error: removalError } = await supabase
           .from("treatments")
-          .update({ category: null })
-          .eq("id", treatmentId)
-      );
-
-      await Promise.all([...updates, ...removals]);
+          .update({ category: null }) // Set to null now that the migration allows it
+          .in("id", unselectedTreatments);
+        
+        if (removalError) throw removalError;
+      }
 
       onSave();
       setSelectedTreatments(new Set());

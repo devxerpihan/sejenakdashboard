@@ -23,7 +23,7 @@ export function useTreatmentCategories() {
 
         // Get unique categories
         const uniqueCategories = Array.from(
-          new Set((data || []).map((t) => t.category as string).filter(Boolean))
+          new Set((data || []).map((t) => t.category as string).filter(cat => cat && cat !== "null" && cat !== "Uncategorized"))
         ).sort();
 
         setCategories(uniqueCategories);

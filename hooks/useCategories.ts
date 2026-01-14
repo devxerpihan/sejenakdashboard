@@ -39,6 +39,7 @@ export function useCategories(): {
       // Convert to Category array
       // Use category name as ID since categories are stored as text in treatments
       const categoryList: Category[] = Object.entries(categoryCounts)
+        .filter(([name]) => name && name !== "null" && name !== "Uncategorized")
         .map(([name, count]) => ({
           id: name, // Use name as ID since categories are just text fields
           name,
